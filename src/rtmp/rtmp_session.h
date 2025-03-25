@@ -7,8 +7,12 @@
 
 typedef struct 
 {
-   
+   int fd;
+   Seesion *conn;
 } RtmpSession;
 
+RtmpSession *createRtmpSession(Seesion *conn);
+void destroyRtmpSession(RtmpSession *session);
+void recvRtmpSession(RtmpSession *session, Buffer *buffer);
 
 #endif

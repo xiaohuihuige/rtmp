@@ -1,11 +1,20 @@
 #include "rtmp_server.h"
+#include "rtmp_session.h"
 
-static void _recvMessage(void *args, void *buffer)
+
+static void _recvMessage(void *seesion, Buffer *buffer)
 {
-    LOG("recv size:%d, %p, %s", ((Buffer *)buffer)->length, args, ((Buffer *)buffer)->data);
+    return recvRtmpSession((RtmpSession *)seesion, buffer);
+}
 
-    char *message = "Hello, server!";
-    send(((Seesion *)args)->fd, message, strlen(message), 0);
+static void *_createRtmpSession(Seesion *conn)
+{
+    return createRtmpSession(conn);
+}
+
+static void _destroyRtmpSession(void *seesion)
+{
+    return destroyRtmpSession((RtmpSession *)seesion);
 }
 
 RtmpServer *createRtmpServer(const char *ip, int port)
@@ -19,7 +28,7 @@ RtmpServer *createRtmpServer(const char *ip, int port)
 
     rtmp->server = createTcpServer(ip, port);
 
-    setTcpServerCallBack(rtmp->server, NULL, _recvMessage, NULL);
+    setTcpServerCallBack(rtmp->server, _createRtmpSession, _recvMessage, _destroyRtmpSession);
 
     return rtmp;
 }
