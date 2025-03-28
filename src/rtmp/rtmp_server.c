@@ -38,5 +38,5 @@ void destroyRtmpServer(RtmpServer *rtmp)
     if (!rtmp)
         return;
 
-    destroyTcpServer(rtmp->server);
+    return destroyTcpServer(rtmp->server);
 }

@@ -8,6 +8,7 @@
 typedef struct 
 {
    int fd;
+   int state;
    Seesion *conn;
 } RtmpSession;
 

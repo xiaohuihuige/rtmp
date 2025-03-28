@@ -5,3 +5,5 @@ echo "/tmp/core.%e.%p" | sudo tee /proc/sys/kernel/core_pattern
 
 ulimit -c unlimited
 ```
+https://rtmp.veriskope.com/docs/spec#53chunking
+https://zhuanlan.zhihu.com/p/645648373
