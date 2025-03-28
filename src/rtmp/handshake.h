@@ -6,7 +6,7 @@
 #include "rtmp_session.h"
 
 
-void rtmpHandShake(RtmpSession *session, Buffer *buffer);
+void createRtmpHandShake(RtmpSession *session, Buffer *buffer);
 
 
 

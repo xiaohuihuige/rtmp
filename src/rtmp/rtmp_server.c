@@ -29,7 +29,12 @@ RtmpServer *createRtmpServer(const char *ip, int port)
     rtmp->server = createTcpServer(ip, port);
 
     setTcpServerCallBack(rtmp->server, _createRtmpSession, _recvMessage, _destroyRtmpSession);
-
+    
+    char play_ip[64] = {0};
+    getHostAddrs(NETWORK_CARD, play_ip, sizeof(play_ip));   
+ 
+    LOG("play rtmp address rtmp://%s:%d/live", play_ip, port);
+    
     return rtmp;
 }
 
