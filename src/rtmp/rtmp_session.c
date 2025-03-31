@@ -26,8 +26,6 @@ static void _parseRtmpPacket(RtmpSession *session, Buffer *buffer)
 
     if (session->state == RTMP_HANDSHAKE_UNINIT || session->state == RTMP_HANDSHAKE_0)
         return createRtmpHandShake(session, buffer);
-
-
 }
 
 void recvRtmpSession(RtmpSession *session, Buffer *buffer)
