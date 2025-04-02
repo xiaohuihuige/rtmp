@@ -7,9 +7,9 @@
 
 typedef struct 
 {
-   int fd;
    int state;
    Seesion *conn;
+   FifoQueue *packets;
 } RtmpSession;
 
 RtmpSession *createRtmpSession(Seesion *conn);

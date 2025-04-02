@@ -51,7 +51,7 @@ static Buffer *_buildHandShakeS2()
     return buffer;
 }
 
-static int _sendRtmpHandShakeS0S1S2(RtmpSession *session, Buffer *buffer)
+static int _sendHandShakeS0S1S2(RtmpSession *session, Buffer *buffer)
 {
     Buffer *send_buffer = createBuffer(2 * RTMP_HANDSHAKE_SIZE + 1);
     if (!send_buffer)
@@ -97,7 +97,7 @@ void createRtmpHandShake(RtmpSession *session, Buffer *buffer)
 
     if (session->state == RTMP_HANDSHAKE_UNINIT) {
         session->state = RTMP_HANDSHAKE_0;
-        _sendRtmpHandShakeS0S1S2(session, buffer);
+        _sendHandShakeS0S1S2(session, buffer);
     }
 
 
