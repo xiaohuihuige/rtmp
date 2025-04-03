@@ -6,9 +6,9 @@
 #define RTMP_VERSION 3
 #define RTMP_HANDSHAKE_SIZE	 1536
 
-
+#define INIT_PACKET       0
 #define WHOLE_PACKET      1
-#define MUTILAtion_PACKET 0 
+#define MUTILAtion_PACKET 2 
 
 typedef enum
 {
@@ -21,6 +21,7 @@ typedef enum
 
 typedef struct 
 {
+	int index;
 	int state;
 	HeaderChunk header;
 	Buffer *buffer;

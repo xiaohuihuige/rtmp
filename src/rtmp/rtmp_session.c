@@ -23,35 +23,43 @@ void destroyRtmpSession(RtmpSession *session)
     FREE(session);
 }
 
-static RtmpPacket *_parseRtmpPacket(Buffer *buffer)
+static int _parseChunkPacket(RtmpPacket *packet, Buffer *buffer)
 {
-    RtmpPacket *packet = CALLOC(1, RtmpPacket);
-    if (!packet) 
-        return NULL;
+    if (packet->state == INIT_PACKET) {
+        int header_len = readHeaderChunk(buffer, &packet->header);
+        if (header_len <= 0)
+            return NULL;
 
-    int len = readHeaderChunk(buffer, &packet->header);
-    if (len <= 0)
-        return NULL;
+        if (packet->header.length > 0) {
+            packet->buffer = createBuffer(packet->header.length);
 
-    if (packet->header.length > 0) {
-        int left_buffer = buffer->length - len;
+            packet->index = packet->header.length > buffer->length - header_len ? buffer->length - header_len : packet->header.length;
+
+            writeBuffer(packet->buffer, 0, buffer->data + header_len, packet->index);
+
+        }
+
+        return header_len
     }
-
-    int left_buffer = buffer->length - len;
-
-    left_buffer
-
 }
 
 
 static void _parseRtmpChunk(RtmpSession *session, Buffer *buffer)
 {
-    RtmpPacket *packet_queue = dequeue(session->packets);
-    if (!packet_queue) {
-        RtmpPacket *packet = _parseRtmpPacket(buffer);
-    } else {
+    static RtmpPacket *temp_packet = NULL;
 
-    }
+    while ()
+
+
+    if (!temp_packet) {
+        RtmpPacket *packet = _parseChunkPacket(session, buffer);
+
+
+
+        return;
+    } 
+
+    temp_packet->state = 
 
 }
 
