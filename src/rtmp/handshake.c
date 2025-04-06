@@ -98,10 +98,13 @@ void createRtmpHandShake(RtmpSession *session, Buffer *buffer)
     if (session->state == RTMP_HANDSHAKE_UNINIT) {
         session->state = RTMP_HANDSHAKE_0;
         _sendHandShakeS0S1S2(session, buffer);
+        return;
     }
 
 
     if (session->state == RTMP_HANDSHAKE_0) {
         session->state = RTMP_HANDSHAKE_1;
+        return;
     }
+    return;
 }

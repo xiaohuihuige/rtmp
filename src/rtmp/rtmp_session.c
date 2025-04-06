@@ -2,6 +2,7 @@
 #include "type.h"
 #include "handshake.h"
 #include "chunk_header.h"
+#include "rtmp_event.h"
 
 RtmpSession *createRtmpSession(Seesion *conn)
 {
@@ -23,44 +24,45 @@ void destroyRtmpSession(RtmpSession *session)
     FREE(session);
 }
 
-static int _parseChunkPacket(RtmpPacket *packet, Buffer *buffer)
+static RtmpPacket *_parseFirstChunkPacket(Buffer *buffer)
 {
-    if (packet->state == INIT_PACKET) {
-        int header_len = readHeaderChunk(buffer, &packet->header);
-        if (header_len <= 0)
-            return NULL;
+    RtmpPacket *packet = CALLOC(1, RtmpPacket);
+    if (!packet) 
+        return NULL;
 
-        if (packet->header.length > 0) {
-            packet->buffer = createBuffer(packet->header.length);
+    if (0 > readHeaderChunk(buffer, &packet->header))
+        return NULL;
 
-            packet->index = packet->header.length > buffer->length - header_len ? buffer->length - header_len : packet->header.length;
-
-            writeBuffer(packet->buffer, 0, buffer->data + header_len, packet->index);
-
-        }
-
-        return header_len
+    if (packet->header.length > 0) {
+        packet->buffer = createBuffer(packet->header.length);
+        packet->index = packet->header.length > buffer->length - packet->header.header_len
+                            ? buffer->length - packet->header.header_len
+                            : packet->header.length;
+        writeBuffer(packet->buffer, 0, buffer->data + packet->header.header_len, packet->index);
     }
+    return packet;
 }
 
+// static int _parseLastChunkPacket(RtmpPacket *packet, Buffer *buffer)
+// {
+//     int residue = packet->header.length - packet->index;
+
+//     if (residue == 0)
+//         return NET_SUCCESS; 
+//     return NET_SUCCESS; 
+// }
 
 static void _parseRtmpChunk(RtmpSession *session, Buffer *buffer)
 {
-    static RtmpPacket *temp_packet = NULL;
-
-    while ()
 
 
-    if (!temp_packet) {
-        RtmpPacket *packet = _parseChunkPacket(session, buffer);
+    RtmpPacket *packet = _parseFirstChunkPacket(buffer);
 
+    handleRtmpEvent(session, packet);
 
-
-        return;
-    } 
-
-    temp_packet->state = 
-
+    //FifoQueue *node = dequeue(session->packets);
+        
+    return;
 }
 
 static void _parseRtmpPacket(RtmpSession *session, Buffer *buffer)

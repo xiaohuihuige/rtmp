@@ -13,6 +13,7 @@ typedef struct
     uint32_t length;    // message length (24-bits)
     uint8_t  type_id;   // message type id
     uint32_t stream_id; // message stream id
+    uint8_t  header_len;
 } HeaderChunk;
 
 int readHeaderChunk(Buffer *buffer, HeaderChunk *header);

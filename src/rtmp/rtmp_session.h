@@ -4,11 +4,13 @@
 #include <schedule/net-common.h>
 #include <schedule/tcp_server.h>
 #include <schedule/timestamp.h>
+#include "type.h"
 
 typedef struct 
 {
    int state;
    Seesion *conn;
+   RtmpPacket *packet;
    FifoQueue *packets;
 } RtmpSession;
 
