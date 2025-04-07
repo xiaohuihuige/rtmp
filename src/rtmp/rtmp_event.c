@@ -16,6 +16,7 @@ static int _handleEvent(RtmpSession *session, RtmpPacket *packet)
         case RTMP_TYPE_FLEX_MESSAGE:
 
         case RTMP_TYPE_INVOKE:
+            handleInvokeEvent(session, b);
             break;
         case RTMP_TYPE_VIDEO:
 

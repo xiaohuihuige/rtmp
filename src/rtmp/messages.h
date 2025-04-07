@@ -3,8 +3,6 @@
 
 #include "type.h"
 #include <schedule/net-common.h>
-#include "invoke.h"
-#include "reply.h"
 #include "rtmp_session.h"
 
 typedef struct 
@@ -12,13 +10,6 @@ typedef struct
     int code;
     char error[126];
 } stateMessage;
-
-typedef struct
-{
-    const char *command;
-    int (*function)(RtmpSession *session, bs_t *b);
-    int (*reply)(RtmpSession *session, int code, double transactionId);
-} handleInvokeCommand;
 
 stateMessage state[] = {
     {200, "result"},
@@ -46,26 +37,5 @@ static inline void printfMessage(char *message, int code)
             LOG("%s %s", message, state[i].error);
     }
 }
-
-handleInvokeCommand gHandleCommand[] = {
-    {"connect",         rtmp_read_onconnect,            rtmp_reply_connect},
-    {"createStream",    rtmp_read_oncreate_stream,      rtmp_reply_result},
-    {"getStreamLength", rtmp_read_onget_stream_length,  NULL},
-    {"play",            rtmp_read_onplay,               rtmp_reply_onplay},
-    {"deleteStream",    rtmp_read_ondelete_stream,      NULL},
-    {"receiveAudio",    rtmp_read_onreceive_audio,      NULL},
-    {"receiveVideo",    rtmp_read_onreceive_video,      NULL},
-    {"publish",         rtmp_read_onpublish,            rtmp_reply_onstatus},
-    {"seek",            rtmp_read_onseek,               NULL},
-    {"pause",           rtmp_read_onpause,              NULL},
-
-    {"FCPublish",       rtmp_read_fcpublish,            NULL},
-    {"FCUnpublish",     rtmp_read_onfcunpublish,        NULL},
-    {"FCSubscribe",     rtmp_read_onfcsubscribe,        NULL},
-    {"FCUnsubscribe",   rtmp_read_onfcunsubscribe,      NULL},
-    {"releaseStream",   rtmp_read_releaseStream,        NULL},
-    {"onFCPublish",     rtmp_read_onfcpublish,          rtmp_reply_result},
-    {"onstatus",        rtmp_read_onfcpublish,          rtmp_reply_result},
-};
 
 #endif // !__MESSAGES_H__
