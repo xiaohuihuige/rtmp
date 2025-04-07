@@ -77,10 +77,7 @@ static void _parseRtmpPacket(RtmpSession *session, Buffer *buffer)
 
 void recvRtmpSession(RtmpSession *session, Buffer *buffer)
 {
-    LOG("recv size:%d, %p, %s", buffer->length, session, buffer->data);
-
-    //char *message = "Hello, server!";
-    //send(session->conn->fd, message, strlen(message), 0);
+    LOG("recv size:%d, %p", buffer->length, session);
     return _parseRtmpPacket(session, buffer);
 }
 

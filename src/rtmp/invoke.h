@@ -4,6 +4,8 @@
 #include <schedule/net-common.h>
 #include "rtmp_session.h"
 
+int handleInvokeEvent(RtmpSession *session, bs_t *b);
+
 int rtmp_read_onconnect(RtmpSession *session, bs_t *b);
 int rtmp_read_oncreate_stream(RtmpSession *session, bs_t *b);
 int rtmp_read_onplay(RtmpSession *session, bs_t *b);
