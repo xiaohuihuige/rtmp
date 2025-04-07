@@ -38,30 +38,76 @@ static RtmpPacket *_parseFirstChunkPacket(Buffer *buffer)
         packet->index = packet->header.length > buffer->length - packet->header.header_len
                             ? buffer->length - packet->header.header_len
                             : packet->header.length;
-        writeBuffer(packet->buffer, 0, buffer->data + packet->header.header_len, packet->index);
+        writeBuffer(packet->buffer, 0, buffer->data + buffer->index + packet->header.header_len, packet->index);
+        buffer->index = packet->index + packet->header.header_len;
     }
     return packet;
 }
 
-// static int _parseLastChunkPacket(RtmpPacket *packet, Buffer *buffer)
-// {
-//     int residue = packet->header.length - packet->index;
+static int _checkChunkPacket(RtmpPacket *packet)
+{
+    if (packet->index == packet->header.length) {
+        packet->state = WHOLE_PACKET;
+        LOG("WHOLE_PACKET");
+        return WHOLE_PACKET;
+    } else {
+        LOG("MUTILAtion_PACKET %d, %d", packet->index, packet->header.length);
+        packet->state = MUTILAtion_PACKET;
+        return MUTILAtion_PACKET;
+    }
+}
 
-//     if (residue == 0)
-//         return NET_SUCCESS; 
-//     return NET_SUCCESS; 
-// }
+static int _parseLastChunkPacket(RtmpPacket *packet, Buffer *buffer)
+{
+    int residue = packet->header.length - packet->index;
+    LOG("%d, %d, %d", residue, packet->header.length, packet->index);
+    if (residue > 0 && residue < buffer->length) {
+        writeBuffer(packet->buffer, packet->index, buffer->data + buffer->index, residue);
+        packet->index += residue;
+        buffer->index += residue;
+    }
+   
+    return NET_SUCCESS; 
+}
 
 static void _parseRtmpChunk(RtmpSession *session, Buffer *buffer)
 {
+    RtmpPacket *packet = NULL;
+    Buffer *next_buffer= NULL;
+    
+    while (1) {
+        if (session->packet) {
+            _parseLastChunkPacket(session->packet, buffer);
+            if (WHOLE_PACKET != _checkChunkPacket(session->packet))
+                break;
 
+            packet = session->packet;
+            session->packet = NULL;
+            LOG("get last packet");
+        } else {
+            packet = _parseFirstChunkPacket(buffer);
+            if (!packet)
+                break;
 
-    RtmpPacket *packet = _parseFirstChunkPacket(buffer);
+            if (WHOLE_PACKET != _checkChunkPacket(packet)) {
+                session->packet = packet;
+                packet = NULL;
+                break;
+            }
+        } 
 
-    handleRtmpEvent(session, packet);
+        handleRtmpEvent(session, packet);
 
-    //FifoQueue *node = dequeue(session->packets);
-        
+        if (buffer->index + 1 < buffer->length) {
+            LOG("%d, %d",buffer->index, buffer->length);
+            next_buffer = createBuffer(buffer->length - buffer->index);
+            writeBuffer(next_buffer, 0, buffer->data + buffer->index, buffer->length - buffer->index);
+            FREE(buffer);
+            buffer = next_buffer;
+            continue;
+        } 
+        break;
+    }     
     return;
 }
 
