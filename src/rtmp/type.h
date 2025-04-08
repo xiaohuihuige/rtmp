@@ -6,10 +6,6 @@
 #define RTMP_VERSION 3
 #define RTMP_HANDSHAKE_SIZE	 1536
 
-#define INIT_PACKET       0
-#define WHOLE_PACKET      1
-#define MUTILAtion_PACKET 2
-
 enum rtmp_chunk_type_t
 {
 	RTMP_CHUNK_TYPE_0 = 0, // 11-bytes: timestamp(3) + length(3) + stream type(1) + stream id(4)
@@ -59,10 +55,25 @@ enum RTMPMessageTypeId
 
 typedef struct 
 {
-	int state;
 	int index;
 	HeaderChunk header;
 	Buffer *buffer;
 } RtmpPacket;
+
+typedef struct 
+{
+	char app[128]; // Server application name, e.g.: testapp
+	char flashver[64]; // Flash Player version, FMSc/1.0
+	char type[128];
+	char swfUrl[256]; // URL of the source SWF file
+	char tcUrl[256]; // URL of the Server, rtmp://host:1935/testapp/instance1
+	uint8_t fpad; // boolean: True if proxy is being used.
+	double capabilities; // double default: 15
+	double audioCodecs; // double default: 4071
+	double videoCodecs; // double default: 252
+	double videoFunction; // double default: 1
+	double encoding;
+	char pageUrl[256]; // http://host/sample.html
+} rtmp_connect;
 
 #endif

@@ -1,5 +1,6 @@
 #include "rtmp_event.h"
 #include "messages.h"
+#include "invoke.h"
 
 static int _handleEvent(RtmpSession *session, RtmpPacket *packet)
 {

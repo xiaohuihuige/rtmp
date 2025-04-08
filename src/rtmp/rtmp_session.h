@@ -11,7 +11,6 @@ typedef struct
    int state;
    Seesion *conn;
    RtmpPacket *packet;
-   FifoQueue *packets;
 } RtmpSession;
 
 RtmpSession *createRtmpSession(Seesion *conn);

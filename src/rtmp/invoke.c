@@ -2,7 +2,38 @@
 #include <schedule/amf0.h>
 #include "reply.h"
 
-int rtmp_read_onconnect(RtmpSession *session, bs_t *b){return NET_SUCCESS; }
+int rtmp_read_onconnect(RtmpSession *session, bs_t *b)
+{
+    if (b == NULL ||rtmp == NULL)
+        return NET_FAIL;
+
+    //retrieve(rtmp->buffer, readable_bytes(rtmp->buffer));
+    
+    rtmp_connect *conn = &rtmp->conn;
+
+	amf_object_item items[1];
+	amf_object_item commands[4];
+
+	conn->encoding = (double)RTMP_ENCODING_AMF_0;
+
+    AMF_OBJECT_ITEM_VALUE(commands[0], AMF_STRING, "app", conn->app, sizeof(conn->app));
+	AMF_OBJECT_ITEM_VALUE(commands[1], AMF_STRING, "type", conn->type, sizeof(conn->type));
+	AMF_OBJECT_ITEM_VALUE(commands[2], AMF_STRING, "flashVer", conn->flashver, sizeof(conn->flashver));
+    AMF_OBJECT_ITEM_VALUE(commands[3], AMF_STRING, "tcUrl", conn->tcUrl, sizeof(conn->tcUrl));
+    // AMF_OBJECT_ITEM_VALUE(commands[3], AMF_BOOLEAN, "fpad", &conn->fpad, 1);
+    // AMF_OBJECT_ITEM_VALUE(commands[4], AMF_NUMBER, "capabilities", &conn->capabilities, 8);
+	// AMF_OBJECT_ITEM_VALUE(commands[5], AMF_NUMBER, "audioCodecs", &conn->audioCodecs, 8);
+ 	// AMF_OBJECT_ITEM_VALUE(commands[6], AMF_NUMBER, "videoCodecs", &conn->videoCodecs, 8);
+ 	// AMF_OBJECT_ITEM_VALUE(commands[7], AMF_NUMBER, "videoFunction", &conn->videoFunction, 8);
+ 	// AMF_OBJECT_ITEM_VALUE(commands[8], AMF_NUMBER, "objectEncoding", &conn->encoding, 8);
+	AMF_OBJECT_ITEM_VALUE(items[0],    AMF_OBJECT, "command", commands, sizeof(commands) / sizeof(commands[0]));
+    
+    return amf_read_object_item(b, bs_read_u8(b), items);
+    return NET_SUCCESS; 
+}
+
+
+
 int rtmp_read_oncreate_stream(RtmpSession *session, bs_t *b){return NET_SUCCESS; }
 int rtmp_read_onplay(RtmpSession *session, bs_t *b){return NET_SUCCESS; }
 int rtmp_read_onget_stream_length(RtmpSession *session, bs_t *b){return NET_SUCCESS; }
@@ -62,12 +93,12 @@ int handleInvokeEvent(RtmpSession *session, bs_t *b)
 
     for (int i = 0; i < sizeof(gHandleCommand) / sizeof(gHandleCommand[0]); i++)
     {
-        if (!strncmp(gHandleCommand[i].command, command, strlen(command)))
+        if (!strncmp(gHandleCommand[i].command, (char *)command, strlen((char *)command)))
         {
-            LOG("%s", command);
-            // int code = g_command_handle[i].function(b, rtmp);
-            // if (g_command_handle[i].reply)
-            //     g_command_handle[i].reply(rtmp, code, transactionId);
+            int code = gHandleCommand[i].function(session, b);
+            if (gHandleCommand[i].reply)
+                gHandleCommand[i].reply(session, code, transactionId);
         }
     }
+    return NET_SUCCESS;
 }
