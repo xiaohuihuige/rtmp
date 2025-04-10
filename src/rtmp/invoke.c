@@ -1,35 +1,31 @@
 #include "invoke.h"
-#include <schedule/amf0.h>
+#include "amf0.h"
 #include "reply.h"
 
 int rtmp_read_onconnect(RtmpSession *session, bs_t *b)
 {
-    if (b == NULL ||rtmp == NULL)
-        return NET_FAIL;
-
-    //retrieve(rtmp->buffer, readable_bytes(rtmp->buffer));
-    
-    rtmp_connect *conn = &rtmp->conn;
-
 	amf_object_item items[1];
 	amf_object_item commands[4];
 
-	conn->encoding = (double)RTMP_ENCODING_AMF_0;
-
-    AMF_OBJECT_ITEM_VALUE(commands[0], AMF_STRING, "app", conn->app, sizeof(conn->app));
-	AMF_OBJECT_ITEM_VALUE(commands[1], AMF_STRING, "type", conn->type, sizeof(conn->type));
-	AMF_OBJECT_ITEM_VALUE(commands[2], AMF_STRING, "flashVer", conn->flashver, sizeof(conn->flashver));
-    AMF_OBJECT_ITEM_VALUE(commands[3], AMF_STRING, "tcUrl", conn->tcUrl, sizeof(conn->tcUrl));
-    // AMF_OBJECT_ITEM_VALUE(commands[3], AMF_BOOLEAN, "fpad", &conn->fpad, 1);
-    // AMF_OBJECT_ITEM_VALUE(commands[4], AMF_NUMBER, "capabilities", &conn->capabilities, 8);
-	// AMF_OBJECT_ITEM_VALUE(commands[5], AMF_NUMBER, "audioCodecs", &conn->audioCodecs, 8);
- 	// AMF_OBJECT_ITEM_VALUE(commands[6], AMF_NUMBER, "videoCodecs", &conn->videoCodecs, 8);
- 	// AMF_OBJECT_ITEM_VALUE(commands[7], AMF_NUMBER, "videoFunction", &conn->videoFunction, 8);
- 	// AMF_OBJECT_ITEM_VALUE(commands[8], AMF_NUMBER, "objectEncoding", &conn->encoding, 8);
+	session->config.encoding = (double)RTMP_ENCODING_AMF_0;
+    //Seesion->
+    AMF_OBJECT_ITEM_VALUE(commands[0], AMF_STRING, "app", session->config.app, sizeof(session->config.app));
+	AMF_OBJECT_ITEM_VALUE(commands[1], AMF_STRING, "type", session->config.type, sizeof(session->config.type));
+	AMF_OBJECT_ITEM_VALUE(commands[2], AMF_STRING, "flashVer", session->config.flashver, sizeof(session->config.flashver));
+    AMF_OBJECT_ITEM_VALUE(commands[3], AMF_STRING, "tcUrl", session->config.tcUrl, sizeof(session->config.tcUrl));
+    AMF_OBJECT_ITEM_VALUE(commands[3], AMF_BOOLEAN, "fpad", &session->config.fpad, 1);
+    AMF_OBJECT_ITEM_VALUE(commands[4], AMF_NUMBER, "capabilities", &session->config.capabilities, 8);
+	AMF_OBJECT_ITEM_VALUE(commands[5], AMF_NUMBER, "audioCodecs", &session->config.audioCodecs, 8);
+ 	AMF_OBJECT_ITEM_VALUE(commands[6], AMF_NUMBER, "videoCodecs", &session->config.videoCodecs, 8);
+ 	AMF_OBJECT_ITEM_VALUE(commands[7], AMF_NUMBER, "videoFunction", &session->config.videoFunction, 8);
+ 	AMF_OBJECT_ITEM_VALUE(commands[8], AMF_NUMBER, "objectEncoding", &session->config.encoding, 8);
 	AMF_OBJECT_ITEM_VALUE(items[0],    AMF_OBJECT, "command", commands, sizeof(commands) / sizeof(commands[0]));
     
-    return amf_read_object_item(b, bs_read_u8(b), items);
-    return NET_SUCCESS; 
+    amf_read_object_item(b, bs_read_u8(b), items);
+
+    LOG("app: %s", session->config.app);
+
+    return NET_SUCCESS;
 }
 
 
@@ -96,8 +92,8 @@ int handleInvokeEvent(RtmpSession *session, bs_t *b)
         if (!strncmp(gHandleCommand[i].command, (char *)command, strlen((char *)command)))
         {
             int code = gHandleCommand[i].function(session, b);
-            if (gHandleCommand[i].reply)
-                gHandleCommand[i].reply(session, code, transactionId);
+            // if (gHandleCommand[i].reply)
+            //     gHandleCommand[i].reply(session, code, transactionId);
         }
     }
     return NET_SUCCESS;

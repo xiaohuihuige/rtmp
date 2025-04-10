@@ -11,6 +11,7 @@ typedef struct
    int state;
    Seesion *conn;
    RtmpPacket *packet;
+   SessionConfig config;
 } RtmpSession;
 
 RtmpSession *createRtmpSession(Seesion *conn);

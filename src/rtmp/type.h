@@ -74,6 +74,6 @@ typedef struct
 	double videoFunction; // double default: 1
 	double encoding;
 	char pageUrl[256]; // http://host/sample.html
-} rtmp_connect;
+} SessionConfig;
 
 #endif
