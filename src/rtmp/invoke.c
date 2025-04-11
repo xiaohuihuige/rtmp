@@ -21,7 +21,7 @@ int rtmp_read_onconnect(RtmpSession *session, bs_t *b)
  	AMF_OBJECT_ITEM_VALUE(commands[8], AMF_NUMBER, "objectEncoding", &session->config.encoding, 8);
 	AMF_OBJECT_ITEM_VALUE(items[0],    AMF_OBJECT, "command", commands, sizeof(commands) / sizeof(commands[0]));
     
-    amf_read_object_item(b, bs_read_u8(b), items);
+    amf_read_object_item(b, items);
 
     LOG("app: %s", session->config.app);
 
