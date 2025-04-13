@@ -2,7 +2,7 @@ CURRENT_DIR = $(shell pwd)
 OUT_DIR     = $(CURRENT_DIR)/out
 OBJ_DIR     = $(OUT_DIR)/obj
 RTMP_DIR    = $(CURRENT_DIR)/src/rtmp
-H264_DIR    = $(CURRENT_DIR)/src/h264
+MEDIA_DIR   = $(CURRENT_DIR)/src/media
 BIN_DIR     = $(OUT_DIR)/bin
 INCLUDE_DIR = $(OUT_DIR)/include
 LIB_DIR     = $(OUT_DIR)/lib
@@ -15,7 +15,7 @@ OBJ_FILE = $(wildcard $(OBJ_DIR)/*.o)
 
 EXECUTABLES = $(patsubst example/%.c, $(BIN_DIR)/%, $(wildcard example/*.c))
 
-CFLAGS = -I$(RTMP_DIR) -I$(H264_DIR) -lschedule  -lpthread -lrt -Wall -fPIC -g 
+CFLAGS = -I$(RTMP_DIR) -I$(H264_DIR) -I$(MEDIA_DIR) -lschedule  -lpthread -lrt -Wall -fPIC -g 
 
 .PHONY: all clean subdir TEMP_PATH
 
@@ -42,7 +42,9 @@ $(BIN_DIR)/%: example/%.c | TEMP_PATH
 	$(CC) -o $@ $^ $(OBJ_FILE) $(CFLAGS)
 
 subdir:
-	$(MAKE) -C $(SRC_DIR) CFLAGS="$(CFLAGS)" OBJ_DIR=$(OBJ_DIR) RTMP_DIR=$(RTMP_DIR) H264_DIR=$(H264_DIR) STATIC_NAME=$(STATIC_NAME) DYNAMIC_NAME=$(DYNAMIC_NAME) 
+	$(MAKE) -C $(SRC_DIR) CFLAGS="$(CFLAGS)" \
+		OBJ_DIR=$(OBJ_DIR) RTMP_DIR=$(RTMP_DIR)  MEDIA_DIR=$(MEDIA_DIR)\
+		STATIC_NAME=$(STATIC_NAME) DYNAMIC_NAME=$(DYNAMIC_NAME) 
 	find $(SRC_DIR) -name "*.h" -exec cp {} $(INCLUDE_DIR) \;
 
 clean:
