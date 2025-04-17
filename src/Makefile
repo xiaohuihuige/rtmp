@@ -13,5 +13,5 @@ dynamic_lib:
 
 subdir:
 	$(MAKE) -C $(RTMP_DIR)  CFLAGS="$(CFLAGS)" OBJ_DIR=$(OBJ_DIR)
-	$(MAKE) -C $(H264_DIR)  CFLAGS="$(CFLAGS)" OBJ_DIR=$(OBJ_DIR)
+	$(MAKE) -C $(MEDIA_DIR) CFLAGS="$(CFLAGS)" OBJ_DIR=$(OBJ_DIR)
 
