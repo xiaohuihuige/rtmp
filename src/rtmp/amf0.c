@@ -212,11 +212,9 @@ int amf_write_NamedBoolean(bs_t *b, const char* name, size_t length, uint8_t val
 
 int amf_read_double(bs_t *b, double* value)
 {
-    if (bs_bytes_left(b) < 8 || value == NULL)
-    {
+    if (!b || !value)
         return -1;
-    }
-
+  
     uint8_t* p = (uint8_t*)value;
     p[7] = bs_read_u8(b);
     p[6] = bs_read_u8(b);
@@ -229,39 +227,43 @@ int amf_read_double(bs_t *b, double* value)
     return 8;
 }
 
-
 int amf_read_string(bs_t *b, char *string, int size)
 {
-    assert(b || string);
+    if (!b)
+        return -1;
 
     uint32_t str_size = bs_read_u(b, 16);
 
     if (bs_bytes_left(b) < str_size)
         return -1;
-
-    bs_read_string(b, str_size, string, size);
+    
+    if (string)
+        bs_read_string(b, str_size, string, size);
 
     return str_size;
 }
 
 int amf_read_long_string(bs_t *b, char *string, int size)
 {
-    assert(b || string);
+    if (!b)
+        return -1;
 
     uint32_t str_size = bs_read_u(b, 32);
 
     if (bs_bytes_left(b) < str_size)
         return -1;
-    
-    bs_read_string(b, str_size, string, size);
+
+    if (string)
+        bs_read_string(b, str_size, string, size);
 
     return str_size;
 }
 
 int amf_read_boolean(bs_t *b, uint8_t *value)
 {
-    assert(b || value);
-
+    if (!b || !value)
+        return -1;
+    
     *value = bs_read_u8(b);
 
     return *value;
@@ -269,7 +271,8 @@ int amf_read_boolean(bs_t *b, uint8_t *value)
 
 int amf_read_date(bs_t *b, double *milliseconds, int16_t *timezone)
 {
-    assert(b || milliseconds || timezone);
+    if (!b || milliseconds || timezone)
+        return -1;
 
     int size = amf_read_double(b, (double *)milliseconds);
 
@@ -280,7 +283,8 @@ int amf_read_date(bs_t *b, double *milliseconds, int16_t *timezone)
 
 int amf_read_ecma_array(bs_t *b, amf_object_item* items, size_t n)
 {
-    assert(b || items);
+    if (!b || !items)
+        return -1;
 
     bs_read_u(b, 32); 
 
@@ -289,12 +293,12 @@ int amf_read_ecma_array(bs_t *b, amf_object_item* items, size_t n)
 
 int amf_read_strict_array(bs_t *b, amf_object_item* items, size_t n)
 {
-    assert(b || items);
+    if (!b || !items)
+        return -1;
 
     uint32_t count = bs_read_u(b, 32);
-    for (uint32_t i = 0; i < count && bs_bytes_left(b) > 1; i++)
-    {
-        //i < n
+    for (uint32_t i = 0; i < count && bs_bytes_left(b) > 1; i++) {
+
         amf_read_object_item(b, &items[i]);  
     }
 
@@ -303,52 +307,55 @@ int amf_read_strict_array(bs_t *b, amf_object_item* items, size_t n)
 
 int amf_read_null(bs_t *b, uint8_t *value)
 {
-    assert(b || value);
+    if (!b || !value)
+        return -1;
 
     *value = bs_read_u8(b);
 
     return 1;
 }
 
+amf_object_item *_findObjectItem(amf_object_item* items, size_t n, char *string, size_t string_len)
+{
+    for (int i = 0; i < n; i++) {
+        if (string_len == strlen(items[i].name) 
+            && !memcmp(string, items[i].name, string_len))
+            return &items[i];
+    }
+    return NULL;
+}
+
 int amf_read_object(bs_t *b, amf_object_item* items, size_t n)
 {
-    if (b == NULL || items == NULL)
+    if (!b || !items)
         return -1;
 
-    while (bs_bytes_left(b) > 2)
-    {
+    while (!bs_eof(b)) {
         char string[64] = {0};
-        int str_size = amf_read_string(b, string, sizeof(string));
-        
-        int i = 0;
-        for (i = 0; i < n; i++)
-        {
-            if (str_size == strlen(items[i].name) 
-                && 0 == memcmp(string, items[i].name, str_size))
-            {
-                break;
-            }
-        }
-  
-        amf_read_object_item(b,  &items[i]);
-        
-    
-        if (bs_read_ru(b, 24) == AMF_OBJECT_END)
-        {
-            LOG("AMF_OBJECT_END");
+        int string_len = amf_read_string(b, string, sizeof(string));
+        if (string_len < 0)
             break;
-        }
+        
+        amf_object_item * find_item = _findObjectItem(items, n, string, string_len);
+        if (!find_item)
+            break;
+
+        amf_read_object_item(b,  &find_item);
+        
+        if (bs_read_ru(b, 24) == AMF_OBJECT_END)
+            break;
     }
 
     return bs_bytes_left(b); 
 }
 
-void amf_read_object_item(bs_t *b, amf_object_item *item)
+int amf_read_object_item(bs_t *b, amf_object_item *item)
 {
-    assert(b || item);
+    if (!b ||!item)
+        return -1;
 
     if (bs_bytes_left(b) <= 1)
-        return;
+        return -1;
 
     switch (bs_read_u8(b))
 	{
@@ -385,7 +392,7 @@ void amf_read_object_item(bs_t *b, amf_object_item *item)
             break;
 	}
 
-    return; 
+    return 0; 
 }
 
 int amf_read_item(bs_t *b, amf_object_item *item, int size)
