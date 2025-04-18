@@ -2,6 +2,37 @@
 
 //static double s_double = 1.0; // 3ff0 0000 0000 0000
 
+typedef struct 
+{
+    int code;
+    char error[126];
+} stateMessage;
+
+stateMessage amf_type_message[] = {
+    {0, "AMF_NUMBER"},
+    {1, "AMF_BOOLEAN"},
+    {2, "AMF_STRING"},
+    {3, "AMF_OBJECT"},
+    {9, "AMF_OBJECT_END"},
+    {5, "AMF_NULL"},
+};
+
+static inline void printfAMFMessage(char *message, int code)
+{
+    for (int i = 0; i < sizeof(amf_type_message)/sizeof(stateMessage); i++) {
+        if (code == amf_type_message[i].code)
+            LOG("%s %s", message, amf_type_message[i].error);
+    }
+}
+
+
+void _printfChar(char *data, size_t len)
+{
+    for (int i = 0; i < len; i++) {
+    	LOG("char %c", data[i]);
+    }
+}
+
 int amf_write_null(bs_t *b)
 {
     if (bs_bytes_left(b) < 1 || b == NULL)
@@ -224,6 +255,9 @@ int amf_read_double(bs_t *b, double* value)
     p[2] = bs_read_u8(b);
     p[1] = bs_read_u8(b);
     p[0] = bs_read_u8(b);
+
+    DBG("read double %f", *value);
+
     return 8;
 }
 
@@ -231,14 +265,16 @@ int amf_read_string(bs_t *b, char *string, int size)
 {
     if (!b)
         return -1;
-
+    
     uint32_t str_size = bs_read_u(b, 16);
 
     if (bs_bytes_left(b) < str_size)
         return -1;
     
-    if (string)
+    if (string && str_size != 0) {
         bs_read_string(b, str_size, string, size);
+    	DBG("read string %s, %u", string, str_size);
+    }
 
     return str_size;
 }
@@ -253,8 +289,10 @@ int amf_read_long_string(bs_t *b, char *string, int size)
     if (bs_bytes_left(b) < str_size)
         return -1;
 
-    if (string)
+    if (string) {
         bs_read_string(b, str_size, string, size);
+	DBG("read string %s, %d", string, str_size);
+    }
 
     return str_size;
 }
@@ -265,6 +303,8 @@ int amf_read_boolean(bs_t *b, uint8_t *value)
         return -1;
     
     *value = bs_read_u8(b);
+
+    DBG("read boolean %d", *value);
 
     return *value;
 }
@@ -318,10 +358,12 @@ int amf_read_null(bs_t *b, uint8_t *value)
 amf_object_item *_findObjectItem(amf_object_item* items, size_t n, char *string, size_t string_len)
 {
     for (int i = 0; i < n; i++) {
+        LOG("compare %d, %s ; %d, %s", string_len, string, strlen(items[i].name), items[i].name);
         if (string_len == strlen(items[i].name) 
             && !memcmp(string, items[i].name, string_len))
             return &items[i];
     }
+
     return NULL;
 }
 
@@ -333,17 +375,20 @@ int amf_read_object(bs_t *b, amf_object_item* items, size_t n)
     while (!bs_eof(b)) {
         char string[64] = {0};
         int string_len = amf_read_string(b, string, sizeof(string));
-        if (string_len < 0)
+	    DBG("command: %s string, str_len %d");
+        if (string_len < 0 || 0 == strlen(string)) {
+	        _printfChar(string, 10);
             break;
-        
+        }
+
         amf_object_item * find_item = _findObjectItem(items, n, string, string_len);
         if (!find_item)
             break;
 
-        amf_read_object_item(b,  &find_item);
+        amf_read_object_item(b,  find_item);
         
-        if (bs_read_ru(b, 24) == AMF_OBJECT_END)
-            break;
+        // if (bs_read_ru(b, 24) == AMF_OBJECT_END)
+        //     break;
     }
 
     return bs_bytes_left(b); 
@@ -356,8 +401,12 @@ int amf_read_object_item(bs_t *b, amf_object_item *item)
 
     if (bs_bytes_left(b) <= 1)
         return -1;
+        
+    int object_type = bs_read_u8(b);
 
-    switch (bs_read_u8(b))
+    printfAMFMessage("amf type :", object_type);
+
+    switch (object_type)
 	{
         case AMF_BOOLEAN:
             amf_read_boolean(b, (uint8_t *)item->value);

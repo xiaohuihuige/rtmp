@@ -30,6 +30,7 @@ stateMessage state[] = {
     {RTMP_TYPE_METADATA, "RTMP_TYPE_METADATA"},
 };
 
+
 static inline void printfMessage(char *message, int code)
 {
     for (int i = 0; i < sizeof(state)/sizeof(stateMessage); i++) {
@@ -37,5 +38,6 @@ static inline void printfMessage(char *message, int code)
             LOG("%s %s", message, state[i].error);
     }
 }
+
 
 #endif // !__MESSAGES_H__

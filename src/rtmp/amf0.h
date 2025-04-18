@@ -17,7 +17,7 @@ enum rtmp_encoding_amf_t
 
 typedef enum 
 {
-	AMF_NUMBER = 0x00,
+	AMF_NUMBER = 0,
 	AMF_BOOLEAN,
 	AMF_STRING,
 	AMF_OBJECT,
@@ -65,7 +65,7 @@ int amf_write_NamedBoolean(bs_t *b, const char* name, size_t length, uint8_t val
 int amf_read_null(bs_t *b, uint8_t *value);
 int amf_read_double(bs_t *b, double* value);
 int amf_read_string(bs_t *b, char *string, int size);
-void amf_read_object_item(bs_t *b, amf_object_item *item);
+int amf_read_object_item(bs_t *b, amf_object_item *item);
 int amf_read_object(bs_t *b, amf_object_item* items, size_t n);
 int amf_read_item(bs_t *b, amf_object_item *item, int size);
 
