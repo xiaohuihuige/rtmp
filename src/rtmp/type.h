@@ -53,6 +53,18 @@ enum RTMPMessageTypeId
 	RTMP_TYPE_METADATA = 22,
 };
 
+
+enum rtmp_channel_t
+{
+	RTMP_CHANNEL_PROTOCOL = 2, // Protocol Control Messages (1,2,3,5,6) & User Control Messages Event (4)
+	RTMP_CHANNEL_INVOKE,	   // RTMP_TYPE_INVOKE (20) & RTMP_TYPE_FLEX_MESSAGE (17)
+	RTMP_CHANNEL_AUDIO,		   // RTMP_TYPE_AUDIO (8)
+	RTMP_CHANNEL_VIDEO,		   // RTMP_TYPE_VIDEO (9)
+	RTMP_CHANNEL_DATA,		   // RTMP_TYPE_DATA (18) & RTMP_TYPE_FLEX_STREAM (15)
+	RTMP_CHANNEL_DATA1,		   // RTMP_TYPE_DATA (18) & RTMP_TYPE_FLEX_STREAM (15)
+	RTMP_CHANNEL_MAX = 65599,  // The protocol supports up to 65597 streams with IDs 3-65599(65535 + 64)
+};
+
 typedef struct 
 {
 	int index;

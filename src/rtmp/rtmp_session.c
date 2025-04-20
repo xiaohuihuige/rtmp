@@ -93,6 +93,8 @@ static void _parseRtmpChunk(RtmpSession *session, Buffer *buffer)
 {
     assert(buffer);
 
+    printfChar(buffer->data, buffer->length);
+
     RtmpPacket *packet = NULL;
 
     while (1) {
@@ -136,9 +138,25 @@ static void _parseRtmpPacket(RtmpSession *session, Buffer *buffer)
     return _parseRtmpChunk(session, buffer);
 }
 
+static void _checkChunkComplete(Buffer *buffer)
+{
+    int count = 0;
+
+    for (int i = 0; i < buffer->length; i++)
+    {
+        if (buffer->data[i] != 0xC3)
+            buffer->data[count++] = buffer->data[i];
+    }
+
+    buffer->length = count;
+}
+
 void recvRtmpSession(RtmpSession *session, Buffer *buffer)
 {
     LOG("recv size:%d, %p", buffer->length, session);
+
+    _checkChunkComplete(buffer);
+
     return _parseRtmpPacket(session, buffer);
 }
 

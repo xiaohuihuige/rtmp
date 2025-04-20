@@ -23,7 +23,13 @@ int rtmp_read_onconnect(RtmpSession *session, bs_t *b)
     
     amf_read_object_item(b, &items);
 
-    LOG("app: %s", session->config.app);
+    LOG("app: %s, flashver: %s, type: %s, swfUrl: %s, tcUrl: %s, fpad: %d, capabilities: %f, audioCodecs: %f, videoCodecs: %f, videoFunction: %f, encoding: %f, pageUrl: %s",
+        session->config.app, session->config.flashver,
+        session->config.type, session->config.swfUrl,
+        session->config.tcUrl, session->config.fpad,
+        session->config.capabilities, session->config.audioCodecs,
+        session->config.videoCodecs, session->config.videoFunction,
+        session->config.encoding, session->config.pageUrl);
 
     return NET_SUCCESS;
 }
@@ -92,8 +98,8 @@ int handleInvokeEvent(RtmpSession *session, bs_t *b)
         if (!strncmp(gHandleCommand[i].command, (char *)command, strlen((char *)command)))
         {
             int code = gHandleCommand[i].function(session, b);
-            // if (gHandleCommand[i].reply)
-            //     gHandleCommand[i].reply(session, code, transactionId);
+            if (gHandleCommand[i].reply)
+                gHandleCommand[i].reply(session, code, transactionId);
             break;
         }
     }

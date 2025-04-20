@@ -17,5 +17,6 @@ typedef struct
 } HeaderChunk;
 
 int readHeaderChunk(Buffer *buffer, HeaderChunk *header);
+int writeChunkHeader(bs_t *b, HeaderChunk *header);
 
 #endif

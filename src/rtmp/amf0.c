@@ -26,11 +26,18 @@ static inline void printfAMFMessage(char *message, int code)
 }
 
 
-void _printfChar(char *data, size_t len)
+void printfChar(uint8_t *data, int len)
 {
+    LOG("byte len %d", len);
     for (int i = 0; i < len; i++) {
-    	LOG("char %c", data[i]);
+        fprintf(stderr, "%02x ", data[i]);
+        if ((i + 1) % 8 == 0 && i != 0)
+            fprintf(stderr, "    ");
+
+        if ((i+1) % 16 == 0 && i != 0)
+            fprintf(stderr, " [%d]\n", i + 1);
     }
+    fprintf(stderr, "\n");
 }
 
 int amf_write_null(bs_t *b)
@@ -270,7 +277,7 @@ int amf_read_string(bs_t *b, char *string, int size)
 
     if (bs_bytes_left(b) < str_size)
         return -1;
-    
+
     if (string && str_size != 0) {
         bs_read_string(b, str_size, string, size);
     	DBG("read string %s, %u", string, str_size);
@@ -291,7 +298,7 @@ int amf_read_long_string(bs_t *b, char *string, int size)
 
     if (string) {
         bs_read_string(b, str_size, string, size);
-	DBG("read string %s, %d", string, str_size);
+	    DBG("read string %s, %d", string, str_size);
     }
 
     return str_size;
@@ -358,7 +365,7 @@ int amf_read_null(bs_t *b, uint8_t *value)
 amf_object_item *_findObjectItem(amf_object_item* items, size_t n, char *string, size_t string_len)
 {
     for (int i = 0; i < n; i++) {
-        LOG("compare %d, %s ; %d, %s", string_len, string, strlen(items[i].name), items[i].name);
+        //LOG("compare %d, %s ; %d, %s", string_len, string, strlen(items[i].name), items[i].name);
         if (string_len == strlen(items[i].name) 
             && !memcmp(string, items[i].name, string_len))
             return &items[i];
@@ -375,9 +382,7 @@ int amf_read_object(bs_t *b, amf_object_item* items, size_t n)
     while (!bs_eof(b)) {
         char string[64] = {0};
         int string_len = amf_read_string(b, string, sizeof(string));
-	    DBG("command: %s string, str_len %d");
         if (string_len < 0 || 0 == strlen(string)) {
-	        _printfChar(string, 10);
             break;
         }
 
@@ -387,8 +392,8 @@ int amf_read_object(bs_t *b, amf_object_item* items, size_t n)
 
         amf_read_object_item(b,  find_item);
         
-        // if (bs_read_ru(b, 24) == AMF_OBJECT_END)
-        //     break;
+        if (bs_read_ru(b, 24) == AMF_OBJECT_END)
+            break;
     }
 
     return bs_bytes_left(b); 

@@ -1,6 +1,58 @@
 #include "chunk_header.h"
 #include "type.h"
 
+#define CHUNK_HEADER 14
+
+static int _wirteChunkHeader(bs_t *b, HeaderChunk *header)
+{
+    if (!b || !header)
+        return -1;
+
+    int len = 0;
+
+    bs_write_u(b, 2, header->fmt);
+    if (header->csid >= 64 + 255) {
+        bs_write_u(b, 6, 1);
+        bs_write_u(b, 16, header->csid);
+        len += 3;
+    }else if (header->csid >= 64) {
+        bs_write_u(b, 6, 0);
+        bs_write_u(b, 8, header->csid);
+        len += 2;
+    }else {
+        bs_write_u(b, 6, header->csid);
+        len += 1;
+    }
+
+    if (header->fmt == RTMP_CHUNK_TYPE_0)
+    {
+        bs_write_u(b, 24, header->timestamp >= 0xFFFFFF ? 0xFFFFFF : header->timestamp);
+        bs_write_u(b, 24, header->length);
+        bs_write_u(b, 8, header->type_id);
+        bs_write_u(b, 32, header->stream_id);
+        len += 11;
+    }
+    else if (header->fmt == RTMP_CHUNK_TYPE_1)
+    {
+        bs_write_u(b, 24, header->timestamp >= 0xFFFFFF ? 0xFFFFFF : header->timestamp);
+        bs_write_u(b, 24, header->length);
+        bs_write_u(b, 8, header->type_id);
+        bs_write_u(b, 32, header->stream_id);
+        len += 11;
+    }
+    else if (header->fmt == RTMP_CHUNK_TYPE_2)
+    {
+        bs_write_u(b, 24, header->timestamp >= 0xFFFFFF ? 0xFFFFFF : header->timestamp);
+        len += 3;
+    }
+    return len;
+}
+
+int writeChunkHeader(bs_t *b, HeaderChunk *header)
+{
+    return _wirteChunkHeader(b, header);
+}
+
 static void _readBasicHeader(bs_t *b, HeaderChunk *header)
 {
     header->fmt = bs_read_u(b, 2);
