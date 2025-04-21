@@ -33,13 +33,15 @@ static RtmpPacket *_parseFirstChunkPacket(Buffer *buffer)
     if (0 > readHeaderChunk(buffer, &packet->header))
         return NULL;
 
-    if (packet->header.length > 0) {
+    if (packet->header.length > 0 && buffer->length > packet->header.header_len) {
         packet->buffer = createBuffer(packet->header.length);
         packet->index = packet->header.length > buffer->length - packet->header.header_len
                             ? buffer->length - packet->header.header_len
                             : packet->header.length;
+
         writeBuffer(packet->buffer, 0, buffer->data + buffer->index + packet->header.header_len, packet->index);
         buffer->index = packet->index + packet->header.header_len;
+        LOG("packet index %d", packet->index);
     }
     return packet;
 }
@@ -61,7 +63,7 @@ static void _parseLastChunkPacket(RtmpPacket *packet, Buffer *buffer)
 
     int residue = packet->header.length - packet->index;
     LOG("%d, %d, %d", residue, packet->header.length, packet->index);
-    if (residue > 0 && residue < buffer->length) {
+    if (residue > 0 && residue <= buffer->length) {
         writeBuffer(packet->buffer, packet->index, buffer->data + buffer->index, residue);
         packet->index += residue;
         buffer->index += residue;

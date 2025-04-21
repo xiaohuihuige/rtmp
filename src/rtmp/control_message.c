@@ -1,6 +1,7 @@
 #include "control_message.h"
 #include "rtmp_session.h"
 #include "type.h"
+#include "amf0.h"
 
 int sendPeerBandwidth(RtmpSession *session, uint32_t window_size, uint8_t limit_type)
 {
@@ -31,6 +32,8 @@ int sendPeerBandwidth(RtmpSession *session, uint32_t window_size, uint8_t limit_
     bs_write_u8(b, limit_type);
 
     send(session->conn->fd, buffer->data, bs_pos(b), 0);
+
+    printfChar(buffer->data, bs_pos(b));
 
     FREE(buffer);
     FREE(b);
