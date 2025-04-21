@@ -30,10 +30,10 @@ int sendPeerBandwidth(RtmpSession *session, uint32_t window_size, uint8_t limit_
     bs_write_u(b, 32, window_size);
     bs_write_u8(b, limit_type);
 
-    send(session->conn->fd, buffer->data, len + 5, 0);
+    send(session->conn->fd, buffer->data, bs_pos(b), 0);
 
     FREE(buffer);
     FREE(b);
-    
+
     return NET_SUCCESS;
 }
