@@ -11,7 +11,19 @@ enum
 
 int rtmp_reply_connect(RtmpSession *session, int code, double transactionId)
 {
-    return sendPeerBandwidth(session, RTMP_WINDOW_SIZE, RTMP_BANDWIDTH_LIMIT_DYNAMIC);  
+    Buffer *buffer = createBuffer(300);
+    if (!buffer)
+        return NET_FAIL;
+
+    sendPeerBandwidth(session, buffer, RTMP_BANDWIDTH_LIMIT_DYNAMIC);  
+
+    sendAcknowledgement(session, buffer, RTMP_WINDOW_SIZE);
+
+    sendChunkSize(session, buffer, RTMP_OUTPUT_CHUNK_SIZE);
+
+    sendConnectResult(session, buffer, transactionId);
+
+    FREE(buffer);
 }
 
 int rtmp_reply_result(RtmpSession *session, int code, double transactionId)

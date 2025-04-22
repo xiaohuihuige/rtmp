@@ -53,6 +53,23 @@ enum RTMPMessageTypeId
 	RTMP_TYPE_METADATA = 22,
 };
 
+enum
+{
+	RTMP_EVENT_STREAM_BEGIN			= 0,
+	RTMP_EVENT_STREAM_EOF			= 1,
+	RTMP_EVENT_STREAM_DRY			= 2,
+	RTMP_EVENT_SET_BUFFER_LENGTH	= 3,
+	RTMP_EVENT_STREAM_IS_RECORD		= 4,
+
+	RTMP_EVENT_PING					= 6, // RTMP_EVENT_PING_REQUEST
+	RTMP_EVENT_PONG					= 7, // RTMP_EVENT_PING_RESPONSE
+
+	// https://www.gnu.org/software/gnash/manual/doxygen/namespacegnash_1_1rtmp.html
+	RTMP_EVENT_REQUEST_VERIFY		= 0x1a,
+	RTMP_EVENT_RESPOND_VERIFY		= 0x1b,
+	RTMP_EVENT_BUFFER_EMPTY			= 0x1f,
+	RTMP_EVENT_BUFFER_READY			= 0x20,
+};
 
 enum rtmp_channel_t
 {

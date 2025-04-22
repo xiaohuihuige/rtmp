@@ -33,16 +33,22 @@ static RtmpPacket *_parseFirstChunkPacket(Buffer *buffer)
     if (0 > readHeaderChunk(buffer, &packet->header))
         return NULL;
 
-    if (packet->header.length > 0 && buffer->length > packet->header.header_len) {
-        packet->buffer = createBuffer(packet->header.length);
-        packet->index = packet->header.length > buffer->length - packet->header.header_len
-                            ? buffer->length - packet->header.header_len
-                            : packet->header.length;
+    if (packet->header.length > 0) {
 
-        writeBuffer(packet->buffer, 0, buffer->data + buffer->index + packet->header.header_len, packet->index);
-        buffer->index = packet->index + packet->header.header_len;
-        LOG("packet index %d", packet->index);
+        packet->buffer = createBuffer(packet->header.length);
+
+        if (buffer->length > packet->header.header_len) {
+            packet->index = packet->header.length > buffer->length - packet->header.header_len
+                                ? buffer->length - packet->header.header_len
+                                : packet->header.length;
+
+            writeBuffer(packet->buffer, 0, buffer->data + buffer->index + packet->header.header_len, packet->index);
+            buffer->index = packet->index + packet->header.header_len;
+        }
     }
+
+    LOG("first packet, [%p, body length %d, index %d], [%p, revc buffer length %d, index %d], ", packet, packet->header.length, packet->index, buffer, buffer->length, buffer->index);
+
     return packet;
 }
 
@@ -53,7 +59,8 @@ static int _checkChunkPacket(RtmpPacket *packet)
     if (packet->index == packet->header.length) 
         return NET_SUCCESS;
 
-    LOG("MUTILAtion_PACKET %d, %d", packet->index, packet->header.length);
+    LOG("mutilation packet [%p, ody length %d, index %d]", packet, packet->header.length, packet->index);
+
     return NET_FAIL;
 }
 
@@ -62,11 +69,16 @@ static void _parseLastChunkPacket(RtmpPacket *packet, Buffer *buffer)
     assert(packet || buffer);
 
     int residue = packet->header.length - packet->index;
-    LOG("%d, %d, %d", residue, packet->header.length, packet->index);
+
+    LOG("last packet, [%p, body length %d, index %d], [%p revc buffer length %d, index %d]", 
+        packet, packet->header.length, packet->index, buffer, buffer->length, buffer->index);
+
     if (residue > 0 && residue <= buffer->length) {
         writeBuffer(packet->buffer, packet->index, buffer->data + buffer->index, residue);
         packet->index += residue;
         buffer->index += residue;
+        LOG("end packet, [%p, body length %d, index %d], [%p, revc buffer length %d, index %d]", 
+            packet, packet->header.length, packet->index, buffer, buffer->length, buffer->index);
     }
 }
 
@@ -76,7 +88,7 @@ static int _nextChunkPacket(Buffer **tbuffer)
 
     Buffer *buffer = *tbuffer;
     if (buffer->index + 1 < buffer->length) {
-        LOG("%d, %d", buffer->index, buffer->length);
+        LOG("next packet %d, %d", buffer->index, buffer->length);
         Buffer *next_buffer = createBuffer(buffer->length - buffer->index);
         if (!next_buffer) 
             return NET_FAIL;
@@ -95,7 +107,7 @@ static void _parseRtmpChunk(RtmpSession *session, Buffer *buffer)
 {
     assert(buffer);
 
-    printfChar(buffer->data, buffer->length);
+    //printfChar(buffer->data, buffer->length);
 
     RtmpPacket *packet = NULL;
 

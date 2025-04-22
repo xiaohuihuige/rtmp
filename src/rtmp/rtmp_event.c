@@ -6,10 +6,12 @@ static int _handleEvent(RtmpSession *session, RtmpPacket *packet)
 {
     assert(packet || session);
 
+    LOG("---------");
+
     bs_t *b = bs_new(packet->buffer->data, packet->buffer->length);
     if (!b) 
         return NET_FAIL;
-
+    
     printfMessage("revc client message:", packet->header.type_id);
 
     switch (packet->header.type_id)
