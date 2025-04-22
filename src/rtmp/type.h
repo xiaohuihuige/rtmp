@@ -82,6 +82,16 @@ enum rtmp_channel_t
 	RTMP_CHANNEL_MAX = 65599,  // The protocol supports up to 65597 streams with IDs 3-65599(65535 + 64)
 };
 
+enum {
+    StreamBegin,
+    StreamEOF,
+    StreamDry,
+    SetBufferLength,
+    StreamIsRecorded,
+    PingRequest,
+    PingResponse,
+};
+
 typedef struct 
 {
 	int index;
