@@ -351,7 +351,14 @@ static void _buildSampleAccess(bs_t *b,  double stream_id, const char *sample_ac
 	amf_write_boolean(b, 1);
 }
 
-static void _buildOnMetaData(bs_t *b)
+static void _buildOnMetaData(bs_t *b, 
+                int width, int height,
+                int displayWidth, int displayHeight, 
+                int duration, int framerate, 
+                int fps, int videodatarate, 
+                int videocodecid, int audiodatarate, 
+                int audiocodecid, int profile, 
+                int level)
 {
     int length = AMF_STRING_LENGTH("onMetaData")  
                 + AMF_OBJECT_LENGTH
@@ -561,7 +568,7 @@ int sendOnMetaData(RtmpSession *session, Buffer *buffer)
     if (!b) 
         return NET_FAIL;
 
-    _buildOnMetaData(b);
+    _buildOnMetaData(b, 1280, 720, 1280, 720, 0, 30, 30, 0, 7, 0, 0, 0, 0)
 
     send(session->conn->fd, buffer->data, bs_pos(b), 0);
 

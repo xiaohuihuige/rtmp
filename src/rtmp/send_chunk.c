@@ -56,10 +56,13 @@ int sendRtmpPacket(RtmpSession *session, HeaderChunk *header, Buffer *frame)
     if (!buffer)
         return NET_FAIL;
 
+    bs_t *b = bs_new(buffer->data, buffer->length);
+    if (!b)
+        return NET_FAIL;
+
     while (frame->length <= frame->index) {
-        bs_t *b = bs_new(buffer->data, buffer->length);
-        if (!b) 
-            break;
+
+        bs_init(b, buffer->data, buffer->length);
 
         writeChunkHeader(b, header);
 
@@ -74,10 +77,8 @@ int sendRtmpPacket(RtmpSession *session, HeaderChunk *header, Buffer *frame)
         frame->index += chunk_size;
 
         header->fmt  = RTMP_CHUNK_TYPE_3;
-
-        FREE(b);
     }
-
+    FREE(b);
     FREE(buffer);
 
     return NET_SUCCESS;
