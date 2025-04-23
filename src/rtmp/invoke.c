@@ -56,7 +56,7 @@ typedef struct
 {
     const char *command;
     int (*function)(RtmpSession *session, bs_t *b);
-    int (*reply)(RtmpSession *session, int code, double transactionId);
+    int (*reply)(RtmpSession *session, HeaderChunk *header, int code, double transactionId);
 } handleInvokeCommand;
 
 handleInvokeCommand gHandleCommand[] = {
@@ -80,7 +80,7 @@ handleInvokeCommand gHandleCommand[] = {
     {"onstatus", rtmp_read_onfcpublish, rtmp_reply_result},
 };
 
-int handleInvokeEvent(RtmpSession *session, bs_t *b)
+int handleInvokeEvent(RtmpSession *session, bs_t *b, HeaderChunk *header)
 {
     double transactionId = -1;
     uint8_t command[256] = {0};
@@ -99,7 +99,7 @@ int handleInvokeEvent(RtmpSession *session, bs_t *b)
         {
             int code = gHandleCommand[i].function(session, b);
             if (gHandleCommand[i].reply)
-                gHandleCommand[i].reply(session, code, transactionId);
+                gHandleCommand[i].reply(session, header, code, transactionId);
             break;
         }
     }

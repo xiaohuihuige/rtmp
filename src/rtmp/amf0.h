@@ -45,6 +45,15 @@ typedef struct
 	size_t size;
 } amf_object_item;
 
+#define AMF_STRING_LENGTH(a) ((strlen(a)) + 3)
+#define AMF_DOUBLE_LENGTH 9
+#define AMF_OBJECT_LENGTH 1
+#define AMF_OBJECT_END_LENGTH 3
+#define AMF_NAMESTRING_LENGTH(a, b) (5 + (strlen(a)) + (strlen(b)))
+#define AMF_NAMEDOUBLE_LENGTH(a) (11 + (strlen(a)))
+#define AMF_NULL_LENGTH 1
+#define AMG_BOOLEAN_LENGTH 2
+
 
 int amf_write_null(bs_t *b);
 int amf_write_undefined(bs_t *b);

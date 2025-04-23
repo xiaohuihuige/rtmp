@@ -48,7 +48,7 @@ static int _handleEvent(RtmpSession *session, RtmpPacket *packet)
     bs_t *b = bs_new(packet->buffer->data, packet->buffer->length);
     if (!b) 
         return NET_FAIL;
-    
+
     printfMessage("revc client message:", packet->header.type_id);
 
     switch (packet->header.type_id)
@@ -56,7 +56,7 @@ static int _handleEvent(RtmpSession *session, RtmpPacket *packet)
         case RTMP_TYPE_FLEX_MESSAGE:
 
         case RTMP_TYPE_INVOKE:
-            handleInvokeEvent(session, b);
+            handleInvokeEvent(session, b, &packet->header);
             break;
         case RTMP_TYPE_VIDEO:
 
@@ -93,6 +93,7 @@ static int _handleEvent(RtmpSession *session, RtmpPacket *packet)
     FREE(b);
     FREE(packet->buffer);
     FREE(packet);
+    
     return NET_SUCCESS;
 }
 

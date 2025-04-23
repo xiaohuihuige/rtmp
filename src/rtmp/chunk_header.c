@@ -105,7 +105,7 @@ static void _showChunkHeader(HeaderChunk *header)
 
 int readHeaderChunk(Buffer *buffer, HeaderChunk *header)
 {
-    bs_t *b = bs_new(buffer->data, buffer->length);
+    bs_t *b = bs_new(buffer->data + buffer->index,  buffer->length);
     if (!b)
         return NET_FAIL;
 
