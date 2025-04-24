@@ -19,7 +19,7 @@ static void _buildConnectResult(bs_t *b, double transactionId, const char* fmsve
 static void _buildCreateStreanResult(bs_t *b, double transactionId, double stream_id);
 static void _buildWriteOnstatus(bs_t *b,  double transactionId, const char* level, const char* code, const char* description);
 static void _buildSampleAccess(bs_t *b,  double stream_id, const char *sample_access);
-static void _buildOnMetaData(bs_t *b);
+static void _buildOnMetaData(bs_t *b, int width, int height, int displayWidth, int displayHeight, int duration, int framerate, int fps, int videodatarate, int videocodecid, int audiodatarate, int audiocodecid, int profile, int level);
 static void _buildStreamIsRecord(bs_t *b, uint32_t streamId);
 static void _buildconnectCommand(bs_t *b, double transactionId);
 
@@ -31,7 +31,7 @@ static void _buildPeerBandwidth(bs_t *b, uint32_t window_size, uint8_t limit_typ
         .csid = RTMP_CHANNEL_PROTOCOL,
         .timestamp = 0,
         .length = 5,
-        .type_id = RTMP_TYPE_WINDOW_ACKNOWLEDGEMENT_SIZE,
+        .type_id = RTMP_TYPE_SET_PEER_BANDWIDTH,
         .stream_id = 0,
     };
 
@@ -377,7 +377,7 @@ static void _buildOnMetaData(bs_t *b,
                 + AMF_NAMESTRING_LENGTH("profile", "") 
                 + AMF_NAMESTRING_LENGTH("level", "") 
                 + AMF_OBJECT_END_LENGTH;
-        
+    LOG(" length %d", length);
     HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_0,
         .csid = RTMP_CHANNEL_VIDEO,
@@ -437,7 +437,7 @@ int sendPeerBandwidth(RtmpSession *session, Buffer *buffer, uint32_t window_size
 
     send(session->conn->fd, buffer->data, bs_pos(b), 0);
 
-    //printfChar(buffer->data, bs_pos(b));
+    printfChar(buffer->data, bs_pos(b));
 
     FREE(b);
 
@@ -455,7 +455,7 @@ int sendAcknowledgement(RtmpSession *session, Buffer *buffer, uint32_t acknowled
 
     send(session->conn->fd, buffer->data, bs_pos(b), 0);
 
-    //printfChar(buffer->data, bs_pos(b));
+    printfChar(buffer->data, bs_pos(b));
 
     FREE(b);
 
@@ -472,7 +472,7 @@ int sendChunkSize(RtmpSession *session, Buffer *buffer, int chunk_size)
 
     send(session->conn->fd, buffer->data, bs_pos(b), 0);
 
-    //printfChar(buffer->data, bs_pos(b));
+    printfChar(buffer->data, bs_pos(b));
 
     FREE(b);
 
@@ -491,7 +491,7 @@ int sendConnectResult(RtmpSession *session, Buffer *buffer, double transactionId
 
     send(session->conn->fd, buffer->data, bs_pos(b), 0);
 
-    //printfChar(buffer->data, bs_pos(b));
+    printfChar(buffer->data, bs_pos(b));
 
     FREE(b);
 
@@ -568,7 +568,7 @@ int sendOnMetaData(RtmpSession *session, Buffer *buffer)
     if (!b) 
         return NET_FAIL;
 
-    _buildOnMetaData(b, 1280, 720, 1280, 720, 0, 30, 30, 0, 7, 0, 0, 0, 0)
+    _buildOnMetaData(b, 1280, 720, 1280, 720, 0, 30, 30, 0, 7, 0, 0, 0, 0);
 
     send(session->conn->fd, buffer->data, bs_pos(b), 0);
 

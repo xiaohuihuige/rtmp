@@ -10,7 +10,7 @@ typedef struct
 {
    int state;
    Seesion *conn;
-   volatile RtmpPacket *packet;
+   RtmpPacket *packet;
    SessionConfig config;
 } RtmpSession;
 

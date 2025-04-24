@@ -12,11 +12,11 @@ enum
 
 int rtmp_reply_connect(RtmpSession *session, HeaderChunk *header, int code, double transactionId)
 {
-    Buffer *buffer = createBuffer(300);
+    Buffer *buffer = createBuffer(500);
     if (!buffer)
         return NET_FAIL;
 
-    sendPeerBandwidth(session, buffer, RTMP_BANDWIDTH_LIMIT_DYNAMIC, RTMP_BANDWIDTH_LIMIT_DYNAMIC);  
+    sendPeerBandwidth(session, buffer, RTMP_WINDOW_SIZE, RTMP_BANDWIDTH_LIMIT_DYNAMIC);  
 
     sendAcknowledgement(session, buffer, RTMP_WINDOW_SIZE);
 
