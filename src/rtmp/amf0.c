@@ -249,7 +249,7 @@ int amf_read_double(bs_t *b, double* value)
     p[1] = bs_read_u8(b);
     p[0] = bs_read_u8(b);
 
-    DBG("read double %f", *value);
+    //DBG("read double %f", *value);
 
     return 8;
 }
@@ -266,7 +266,7 @@ int amf_read_string(bs_t *b, char *string, int size)
 
     if (string && str_size != 0) {
         bs_read_string(b, str_size, string, size);
-    	DBG("read string %s, %u", string, str_size);
+    	//DBG("read string %s, %u", string, str_size);
     }
 
     return str_size;
@@ -284,7 +284,7 @@ int amf_read_long_string(bs_t *b, char *string, int size)
 
     if (string) {
         bs_read_string(b, str_size, string, size);
-	    DBG("read string %s, %d", string, str_size);
+	    //DBG("read string %s, %d", string, str_size);
     }
 
     return str_size;
@@ -297,7 +297,7 @@ int amf_read_boolean(bs_t *b, uint8_t *value)
     
     *value = bs_read_u8(b);
 
-    DBG("read boolean %d", *value);
+    //DBG("read boolean %d", *value);
 
     return *value;
 }
@@ -395,7 +395,7 @@ int amf_read_object_item(bs_t *b, amf_object_item *item)
         
     int object_type = bs_read_u8(b);
 
-    printfAMFMessage("amf type :", object_type);
+    //printfAMFMessage("amf type :", object_type);
 
     switch (object_type)
 	{

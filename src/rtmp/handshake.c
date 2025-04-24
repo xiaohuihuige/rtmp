@@ -1,5 +1,6 @@
 #include "handshake.h"
 #include "type.h"
+#include "send_chunk.h"
 
 static void _buildHandShakeRandom(Buffer *buffer, int index)
 {
@@ -77,8 +78,7 @@ static int _sendHandShakeS0S1S2(RtmpSession *session, Buffer *buffer)
         writeBuffer(send_buffer, 0, v_buffer->data, v_buffer->length);
         writeBuffer(send_buffer, v_buffer->length, s1_buffer->data, s1_buffer->length);
         writeBuffer(send_buffer, v_buffer->length + s1_buffer->length, s2_buffer->data, s2_buffer->length);
-
-        send(session->conn->fd, send_buffer->data, send_buffer->length, 0);
+        sendToClient(session, send_buffer->data, send_buffer->length);
 
     } while (0);
 

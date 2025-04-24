@@ -2,6 +2,7 @@
 #include "rtmp_session.h"
 #include "type.h"
 #include "amf0.h"
+#include "send_chunk.h"
 
 static void _buildPeerBandwidth(bs_t *b, uint32_t window_size, uint8_t limit_type);
 static void _buildSetChunkSize(bs_t *b, int chunk_size);
@@ -240,18 +241,17 @@ static void _buildConnectResult(bs_t *b,
                 + AMF_NAMEDOUBLE_LENGTH("mode")
                 + AMF_OBJECT_END_LENGTH
                 + AMF_OBJECT_LENGTH
-                + AMF_NAMESTRING_LENGTH("level", fmsver)
+                + AMF_NAMESTRING_LENGTH("level", level)
                 + AMF_NAMESTRING_LENGTH("code", code)
                 + AMF_NAMESTRING_LENGTH("description", description)
                 + AMF_NAMEDOUBLE_LENGTH("objectEncoding")
                 + AMF_OBJECT_END_LENGTH;
 
-      
     HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_0,
         .csid = RTMP_CHANNEL_INVOKE,
         .timestamp = 0,
-        .length = length,
+        .length = 205,
         .type_id = RTMP_TYPE_INVOKE,
         .stream_id = 0,
     };
@@ -266,7 +266,7 @@ static void _buildConnectResult(bs_t *b,
 	amf_write_NamedDouble(b,  "capabilities", strlen("capabilities"), capabilities);
 	amf_write_NamedDouble(b,  "mode", strlen("mode"), 1);
 	amf_write_objectEnd(b);
-
+ 
 	amf_write_object(b);
 	amf_write_NamedString(b, "level", strlen("level"), level, strlen(level));
 	amf_write_NamedString(b, "code", strlen("code"), code, strlen(code));
@@ -377,7 +377,7 @@ static void _buildOnMetaData(bs_t *b,
                 + AMF_NAMESTRING_LENGTH("profile", "") 
                 + AMF_NAMESTRING_LENGTH("level", "") 
                 + AMF_OBJECT_END_LENGTH;
-    LOG(" length %d", length);
+
     HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_0,
         .csid = RTMP_CHANNEL_VIDEO,
@@ -435,9 +435,9 @@ int sendPeerBandwidth(RtmpSession *session, Buffer *buffer, uint32_t window_size
 
     _buildPeerBandwidth(b,  window_size, limit_type);
 
-    send(session->conn->fd, buffer->data, bs_pos(b), 0);
+    sendToClient(session, buffer->data, bs_pos(b));
 
-    printfChar(buffer->data, bs_pos(b));
+    //printfChar(buffer->data, bs_pos(b));
 
     FREE(b);
 
@@ -453,9 +453,9 @@ int sendAcknowledgement(RtmpSession *session, Buffer *buffer, uint32_t acknowled
 
     _buildWindowAcknowledgementSize(b, acknowledgement);
 
-    send(session->conn->fd, buffer->data, bs_pos(b), 0);
+    sendToClient(session, buffer->data, bs_pos(b));
 
-    printfChar(buffer->data, bs_pos(b));
+    //printfChar(buffer->data, bs_pos(b));
 
     FREE(b);
 
@@ -470,9 +470,9 @@ int sendChunkSize(RtmpSession *session, Buffer *buffer, int chunk_size)
 
     _buildSetChunkSize(b,  chunk_size);
 
-    send(session->conn->fd, buffer->data, bs_pos(b), 0);
+    sendToClient(session, buffer->data, bs_pos(b));
 
-    printfChar(buffer->data, bs_pos(b));
+    //printfChar(buffer->data, bs_pos(b));
 
     FREE(b);
 
@@ -489,9 +489,9 @@ int sendConnectResult(RtmpSession *session, Buffer *buffer, double transactionId
                                     RTMP_CAPABILITIES, "NetConnection.Connect.Success", 
                                     RTMP_LEVEL_STATUS, "Connection succeeded.", 0.0);
 
-    send(session->conn->fd, buffer->data, bs_pos(b), 0);
+    sendToClient(session, buffer->data, bs_pos(b));
 
-    printfChar(buffer->data, bs_pos(b));
+    //printfChar(buffer->data, bs_pos(b));
 
     FREE(b);
 
@@ -507,7 +507,7 @@ int sendCreateStreamResult(RtmpSession *session, Buffer *buffer, double transact
 
     _buildCreateStreanResult(b, transactionId, stream_id);
 
-    send(session->conn->fd, buffer->data, bs_pos(b), 0);
+    sendToClient(session, buffer->data, bs_pos(b));
 
     FREE(b);
 
@@ -522,7 +522,7 @@ int sendSetStreamBegin(RtmpSession *session, Buffer *buffer, uint32_t stream_id)
 
     _buildSetStreamBegin(b, stream_id);
 
-    send(session->conn->fd, buffer->data, bs_pos(b), 0);
+    sendToClient(session, buffer->data, bs_pos(b));
 
     FREE(b);
 
@@ -539,7 +539,7 @@ int sendOnstatus(RtmpSession *session, Buffer *buffer, double transactionId,  co
     sprintf(message, "start %s", app);
     _buildWriteOnstatus(b, transactionId, RTMP_LEVEL_STATUS, "NetStream.Play.Start", message);
 
-    send(session->conn->fd, buffer->data, bs_pos(b), 0);
+    sendToClient(session, buffer->data, bs_pos(b));
 
     FREE(b);
 
@@ -555,7 +555,7 @@ int sendSampleAccess(RtmpSession *session, Buffer *buffer,  uint32_t stream_id)
 
     _buildSampleAccess(b, stream_id, "|RtmpSampleAccess");
 
-    send(session->conn->fd, buffer->data, bs_pos(b), 0);
+    sendToClient(session, buffer->data, bs_pos(b));
 
     FREE(b);
 
@@ -570,7 +570,7 @@ int sendOnMetaData(RtmpSession *session, Buffer *buffer)
 
     _buildOnMetaData(b, 1280, 720, 1280, 720, 0, 30, 30, 0, 7, 0, 0, 0, 0);
 
-    send(session->conn->fd, buffer->data, bs_pos(b), 0);
+    sendToClient(session, buffer->data, bs_pos(b));
 
     FREE(b);
 

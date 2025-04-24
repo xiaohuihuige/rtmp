@@ -12,6 +12,12 @@ RtmpSession *createRtmpSession(Seesion *conn)
 
     session->conn  = conn;
     session->state = RTMP_HANDSHAKE_UNINIT;
+    session->packet = NULL;
+    session->stream_task = NULL;
+
+    session->media = createMediaChannl("app", 0, "test.h264");
+
+    session->interval == 33;
 
     return session;
 }
@@ -20,6 +26,62 @@ void destroyRtmpSession(RtmpSession *session)
 {
     LOG("close");
     FREE(session);
+}
+
+static int _runRtmpPushStream(RtmpSession *session)
+{
+    if (session->media->buffer->index >= session->media->buffer->length)
+        return NET_FAIL;
+
+    int nal_start = 0, nal_end = 0;
+
+    int resp = find_nal_unit(session->media->buffer->data + session->media->buffer->index, session->media->buffer->length - session->media->buffer->index, &nal_start, &nal_end);
+    if (resp <= 0)
+        return NET_FAIL;
+
+    uint8_t *nalu_start = session->media->buffer->data + session->media->buffer->index + nal_start;
+
+    rtmp_paser_packet(nalu_start, nal_end - nal_start, (*nalu_start) & 0x1F);
+
+    static int count = 0;
+    Buffer *frame = createFrameBuffer(nalu_start, nal_end - nal_start, (*nalu_start) & 0x1F, count);
+    if (frame->frame_type == NAL_UNIT_TYPE_SPS)
+    {
+        if (!session->sps_frame)
+            session->sps_frame = frame;
+    }
+
+    if (frame->frame_type == NAL_UNIT_TYPE_PPS) {
+        if (!session->pps_frame)
+            session->pps_frame = frame;
+    }
+
+    if (session->pps_frame && session->sps_frame) 
+    {
+        if (frame->frame_type == NAL_UNIT_TYPE_SPS || frame->frame_type == NAL_UNIT_TYPE_PPS) {
+            rtmpAvcSequence(session->sps_frame, session->pps_frame);
+        }
+    }
+
+
+    Buffer *rtmpWriteFrame(Buffer *frame);
+    Buffer *rtmpAvcSequence(Buffer *sps_frame, Buffer *pps_frame);
+
+    sendFrameStream(RtmpSession *session, Buffer *frame);
+    sendScriptStream(RtmpSession *session, Buffer *frame);
+
+    count += session->interval;
+
+    session->media->buffer->index += nal_end - nal_start;
+
+    return NET_SUCCESS;
+}
+
+int addRtmpPushTask(RtmpSession *session)
+{
+    session->stream_task = addTimerTask(session->conn->tcps->scher, 0, 30, _runRtmpPushStream, session);
+    if (!session->stream_task)
+        return NET_FAIL;
 }
 
 static int _parseFirstChunkPacket(RtmpPacket *packet, Buffer *buffer)
@@ -122,7 +184,6 @@ static void _parseRtmpChunk(RtmpSession *session, Buffer *buffer)
                 break;
         }
          
-        LOG("buffer %d,%d", buffer->index, buffer->length);
         if (buffer->index  >= buffer->length) 
             break;
     }    

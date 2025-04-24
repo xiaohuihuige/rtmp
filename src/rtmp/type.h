@@ -3,8 +3,50 @@
 
 #include "chunk_header.h"
 
-#define RTMP_VERSION 3
-#define RTMP_HANDSHAKE_SIZE	 1536
+#define RTMP_VERSION 			3
+#define RTMP_HANDSHAKE_SIZE	 	1536
+#define RTMP_OUTPUT_CHUNK_SIZE 	4096
+
+#define RTMP_FMSVER				"FMS/3,0,1,123"
+#define RTMP_CAPABILITIES		31
+
+#define RTMP_STREAM_LIVE		"live"
+#define RTMP_STREAM_RECORD		"record"
+#define RTMP_STREAM_APPEND		"append"
+
+#define RTMP_LEVEL_WARNING		"warning"
+#define RTMP_LEVEL_STATUS		"status"
+#define RTMP_LEVEL_ERROR		"error"
+#define RTMP_LEVEL_FINISH		"finish" // ksyun cdn
+#define RTMP_WINDOW_SIZE    	5000000
+
+#define RTMP_FRAME_HEADER_LENGTH 9
+#define RTMP_AVC_HEADER_LENGTH   16
+
+enum {
+    NAL_UNIT_TYPE_UNSPECIFIED = 0,                    // Unspecified
+    NAL_UNIT_TYPE_CODED_SLICE_NON_IDR,                // Coded slice of a non-IDR picture
+    NAL_UNIT_TYPE_CODED_SLICE_DATA_PARTITION_A,       // Coded slice data partition A
+    NAL_UNIT_TYPE_CODED_SLICE_DATA_PARTITION_B,       // Coded slice data partition B
+    NAL_UNIT_TYPE_CODED_SLICE_DATA_PARTITION_C,       // Coded slice data partition C
+    NAL_UNIT_TYPE_CODED_SLICE_IDR = 5,                // Coded slice of an IDR picture
+    NAL_UNIT_TYPE_SEI,                                // Supplemental enhancement information (SEI)
+    NAL_UNIT_TYPE_SPS = 7,                            // Sequence parameter set
+    NAL_UNIT_TYPE_PPS = 8,                            // Picture parameter set
+    NAL_UNIT_TYPE_AUD,                                // Access unit delimiter
+    NAL_UNIT_TYPE_END_OF_SEQUENCE,                    // End of sequence
+    NAL_UNIT_TYPE_END_OF_STREAM,                      // End of stream
+    NAL_UNIT_TYPE_FILLER,                             // Filler data
+    NAL_UNIT_TYPE_SPS_EXT,                            // Sequence parameter set extension
+    NAL_UNIT_TYPE_PREFIX_NAL,                         // Prefix NAL unit
+    NAL_UNIT_TYPE_SUBSET_SPS,                         // Subset Sequence parameter set
+    NAL_UNIT_TYPE_DPS,                                // Depth Parameter Set
+                                                      // 17..18    // Reserved
+    NAL_UNIT_TYPE_CODED_SLICE_AUX = 19,               // Coded slice of an auxiliary coded picture without partitioning
+    NAL_UNIT_TYPE_CODED_SLICE_SVC_EXTENSION,          // Coded slice of SVC extension
+                                                      // 20..23    // Reserved
+                                                      // 24..31    // Unspecified
+};
 
 enum rtmp_chunk_type_t
 {
@@ -90,6 +132,13 @@ enum {
     StreamIsRecorded,
     PingRequest,
     PingResponse,
+};
+
+enum
+{
+    RTMP_BANDWIDTH_LIMIT_HARD = 0,
+    RTMP_BANDWIDTH_LIMIT_SOFT = 1,
+    RTMP_BANDWIDTH_LIMIT_DYNAMIC = 2,
 };
 
 typedef struct 

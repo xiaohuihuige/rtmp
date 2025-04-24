@@ -1,8 +1,8 @@
 #include "rtmp_event.h"
 #include "messages.h"
-#include "invoke.h"
+#include "rtmp_invoke.h"
 
-static int rtmp_recv_paser_event(RtmpSession *session, bs_t *b)
+static int _handleRtmpEvent(RtmpSession *session, bs_t *b)
 {
     int event_type = bs_read_u(b, 16);
     if (event_type == SetBufferLength)
@@ -15,7 +15,7 @@ static int rtmp_recv_paser_event(RtmpSession *session, bs_t *b)
     return NET_SUCCESS;
 }
 
-static int rtmp_recv_paser_acknowledgement(RtmpSession *session, bs_t *b)
+static int _handleAcknowledgement(RtmpSession *session, bs_t *b)
 {
     int window_size  = bs_read_u(b, 32);
 
@@ -24,7 +24,7 @@ static int rtmp_recv_paser_acknowledgement(RtmpSession *session, bs_t *b)
     return NET_SUCCESS;
 }
 
-static int rtmp_recv_set_chunk_size(RtmpSession *session, bs_t *b)
+static int _handleSetChunkSize(RtmpSession *session, bs_t *b)
 {
     int chunk_size = bs_read_u(b, 32);
 
@@ -33,7 +33,7 @@ static int rtmp_recv_set_chunk_size(RtmpSession *session, bs_t *b)
     return NET_SUCCESS;
 }
 
-static int rtmp_recv_set_peer_bandwidth(RtmpSession *session, bs_t *b)
+static int _handleSetPeerBandwidth(RtmpSession *session, bs_t *b)
 {
     int window     = bs_read_u(b, 32);
     int limit_type = bs_read_u(b, 8);
@@ -63,18 +63,18 @@ static int _handleEvent(RtmpSession *session, RtmpPacket *packet)
         case RTMP_TYPE_AUDIO:
 
         case RTMP_TYPE_EVENT:
-            rtmp_recv_paser_event(session, b);
+            _handleRtmpEvent(session, b);
             break;
         case RTMP_TYPE_SET_CHUNK_SIZE:
-            rtmp_recv_set_chunk_size(session, b);
+            _handleSetChunkSize(session, b);
             break;
         case RTMP_TYPE_ABORT:
         case RTMP_TYPE_ACKNOWLEDGEMENT:
         case RTMP_TYPE_WINDOW_ACKNOWLEDGEMENT_SIZE:
-            rtmp_recv_paser_acknowledgement(session, b);
+            _handleAcknowledgement(session, b);
             break;
         case RTMP_TYPE_SET_PEER_BANDWIDTH:
-            rtmp_recv_set_peer_bandwidth(session, b);
+            _handleSetPeerBandwidth(session, b);
             break;
         case RTMP_TYPE_DATA:
             //rtmp_recv_set_onMetaData(session, b);
