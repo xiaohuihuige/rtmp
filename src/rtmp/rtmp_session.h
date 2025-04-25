@@ -10,14 +10,15 @@
 typedef struct 
 {
    int interval;
+   int base_time;
    int state;
    Seesion *conn;
    RtmpPacket *packet;
    SessionConfig config;
    TaskTimer *stream_task;
    Media *media;
-   Buffer *sps_frame;
-   Buffer *pps_frame;
+   Buffer *buffer;
+   bs_t *b;
 } RtmpSession;
 
 RtmpSession *createRtmpSession(Seesion *conn);

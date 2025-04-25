@@ -2,7 +2,7 @@
 
 #define CHUNK_SIZE 255
 
-Buffer *_rtmpWriteFrame(Buffer *frame)
+Buffer *rtmpWriteFrame(Buffer *frame)
 {
     int length = RTMP_FRAME_HEADER_LENGTH + frame->length;
 
@@ -13,6 +13,8 @@ Buffer *_rtmpWriteFrame(Buffer *frame)
     bs_t *b = bs_new(buffer->data, buffer->length);
     if (!b)
         return NULL;
+
+    buffer->frame_type = frame->frame_type;
 
     if (NAL_UNIT_TYPE_CODED_SLICE_IDR == frame->frame_type)
         bs_write_u8(b, 0x17); //0x27
@@ -33,7 +35,7 @@ Buffer *_rtmpWriteFrame(Buffer *frame)
     return buffer;
 }
 
-Buffer *_rtmpAvcSequence(Buffer *sps_frame, Buffer *pps_frame)
+Buffer *rtmpAvcSequence(Buffer *sps_frame, Buffer *pps_frame)
 {
     int length = sps_frame->length + pps_frame->length + RTMP_AVC_HEADER_LENGTH;
 
@@ -65,35 +67,35 @@ Buffer *_rtmpAvcSequence(Buffer *sps_frame, Buffer *pps_frame)
     bs_write_u(b, 16, pps_frame->length);
     bs_write_bytes(b, pps_frame->data, pps_frame->length);
 
-    FREE(b);
+    //LOG("pos %d, %d", length, bs_pos(b));
 
+    //printfChar(buffer->data, length);
+
+    FREE(b);
+    
     return buffer;
 }
 
-int sendFrameStream(RtmpSession *session, Buffer *frame)
+int sendFrameStream(RtmpSession *session, Buffer *frame, uint32_t timestamp)
 {
-    Buffer *buffer = _rtmpWriteFrame(frame);
-    if (!buffer)
-        return NET_FAIL;
-    
     HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_0,
         .csid = RTMP_CHANNEL_DATA,
-        .timestamp = buffer->timestamp,
-        .length = buffer->length,
+        .timestamp = timestamp,
+        .length = frame->length,
         .type_id = RTMP_TYPE_VIDEO,
         .stream_id = 0,
     };
 
-    return sendRtmpPacket(session, &header, buffer);
+    return sendRtmpPacket(session, &header, frame);
 }
 
-int sendAudioStream(RtmpSession *session, Buffer *frame)
+int sendAudioStream(RtmpSession *session, Buffer *frame, uint32_t timestamp)
 {
     HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_1,
         .csid = RTMP_CHANNEL_AUDIO,
-        .timestamp = frame->timestamp,
+        .timestamp = timestamp,
         .length = frame->length,
         .type_id = RTMP_TYPE_AUDIO,
         .stream_id = 0,
@@ -102,23 +104,18 @@ int sendAudioStream(RtmpSession *session, Buffer *frame)
     return sendRtmpPacket(session, &header, frame);
 }
 
-int sendScriptStream(RtmpSession *session, Buffer *sps_frame, Buffer *pps_frame)
+int sendScriptStream(RtmpSession *session, Buffer *frame, uint32_t timestamp)
 {
-  
-    Buffer * buffer = _rtmpAvcSequence(sps_frame, pps_frame);
-    if (!buffer)
-        return NET_FAIL;
-
     HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_1,
         .csid = RTMP_CHANNEL_INVOKE,
-        .timestamp = buffer->timestamp,
-        .length = buffer->length,
+        .timestamp = timestamp,
+        .length = frame->length,
         .type_id = RTMP_TYPE_DATA,
         .stream_id = 0,
     };
 
-    return sendRtmpPacket(session, &header, buffer);
+    return sendRtmpPacket(session, &header, frame);
 }
 
 int sendRtmpPacket(RtmpSession *session, HeaderChunk *header, Buffer *frame)
@@ -129,25 +126,17 @@ int sendRtmpPacket(RtmpSession *session, HeaderChunk *header, Buffer *frame)
     if (header->length <= 0)
         return NET_FAIL;
 
-    Buffer *buffer = createBuffer(header->header_len + CHUNK_SIZE);
-    if (!buffer)
-        return NET_FAIL;
+    while (frame->length > frame->index) {
 
-    bs_t *b = bs_new(buffer->data, buffer->length);
-    if (!b)
-        return NET_FAIL;
+        bs_init(session->b, session->buffer->data, session->buffer->length);
 
-    while (frame->length <= frame->index) {
+        writeChunkHeader(session->b, header);
 
-        bs_init(b, buffer->data, buffer->length);
-
-        writeChunkHeader(b, header);
-
-        int chunk_size = frame->length - frame->index < CHUNK_SIZE ? frame->length - frame->index : CHUNK_SIZE;
+        int chunk_size = frame->length - frame->index < RTMP_OUTPUT_CHUNK_SIZE ? frame->length - frame->index : RTMP_OUTPUT_CHUNK_SIZE;
         
-        bs_write_bytes(b, frame->data + frame->index, chunk_size);
-        
-        int code = sendToClient(session->conn->fd, buffer->data, bs_pos(b));
+        bs_write_bytes(session->b, frame->data + frame->index, chunk_size);
+
+        int code = sendToClient(session, session->buffer->data, bs_pos(session->b));
         if (code <= 0)
             break;
 
@@ -155,8 +144,6 @@ int sendRtmpPacket(RtmpSession *session, HeaderChunk *header, Buffer *frame)
 
         header->fmt  = RTMP_CHUNK_TYPE_3;
     }
-    FREE(b);
-    FREE(buffer);
 
     return NET_SUCCESS;
 }

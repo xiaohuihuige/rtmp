@@ -11,12 +11,13 @@
 typedef struct 
 {
     char app[64];
-    FILE *fp;
-    Buffer *buffer;
+    Buffer *pps;
+    Buffer *sps;
+    FifoQueue *frame_fifo;
+    Buffer *avc_buffer;
 } Media;
 
 Media *createMediaChannl(const char *app, int stream_type, const char *file_path);
-int startRunMediaStream(Media *media);
 
 #endif // !__MEDIA_H__
 

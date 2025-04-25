@@ -6,12 +6,14 @@
 static inline int sendToClient(RtmpSession *session, uint8_t *data, int len)
 {
     DBG("[send message fd:%d, length: %d]", session->conn->fd, len);
+    //printfChar(data, len);
     return send(session->conn->fd, data, len, 0);
 }
 
-int sendFrameStream(RtmpSession *session, Buffer *frame);
-int sendAudioStream(RtmpSession *session, Buffer *frame);
-int sendScriptStream(RtmpSession *session, Buffer *frame);
+int sendFrameStream(RtmpSession *session, Buffer *frame, uint32_t timestamp);
+int sendAudioStream(RtmpSession *session, Buffer *frame, uint32_t timestamp);
+int sendScriptStream(RtmpSession *session, Buffer *frame, uint32_t timestamp);
+
 int sendRtmpPacket(RtmpSession *session, HeaderChunk *header, Buffer *frame);
 
 Buffer *rtmpWriteFrame(Buffer *frame);

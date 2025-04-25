@@ -1,4 +1,74 @@
 #include "media.h"
+#include "type.h"
+#include "h264.h"
+#include "send_chunk.h"
+
+static Buffer *_readH264Nalu(Media *media, const char *file_path)
+{
+    FILE *fp = fopen(file_path, "rb+");
+    if (!fp)
+        return NULL;
+
+    fseek(fp, 0, SEEK_END);
+    long fileSize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    Buffer *buffer = createBuffer(fileSize);
+    if (!buffer)
+        return NULL;
+
+    fread(buffer->data, 1, fileSize, fp);
+
+    fclose(fp);
+
+    return buffer;
+}
+
+static void _paserNaluPacket(Media *media, uint8_t *data, int size, int type)
+{
+    Buffer *frame = createFrameBuffer(data, size, type, 0);
+    if (type == NAL_UNIT_TYPE_SPS) {
+        if (!media->sps)
+            media->sps = frame;
+        return;
+    }
+
+    if (type == NAL_UNIT_TYPE_PPS) {
+        if (!media->pps)
+            media->pps = frame;
+        return;
+    }
+
+    Buffer *frame_buffer = rtmpWriteFrame(frame);
+    if (!frame_buffer)
+        return;
+
+    FREE(frame);
+
+    enqueue(media->frame_fifo, frame_buffer);
+
+    //LOG("count %d, %d", list_count_nodes(&media->frame_fifo->list), frame_buffer->length);
+}
+
+static int _runMediaStream(Media *media, Buffer *buffer)
+{
+    if (buffer->index >= buffer->length)
+        return NET_FAIL;
+
+    int nal_start = 0, nal_end = 0;
+
+    int resp = find_nal_unit(buffer->data + buffer->index, buffer->length - buffer->index, &nal_start, &nal_end);
+    if (resp <= 0)
+        return NET_FAIL;
+
+    uint8_t *nalu_start = buffer->data + buffer->index + nal_start;
+
+    _paserNaluPacket(media, nalu_start, nal_end - nal_start, (*nalu_start) & 0x1F);
+
+    buffer->index += nal_end - nal_start;
+
+    return NET_SUCCESS;
+}
 
 Media *createMediaChannl(const char *app, int stream_type, const char *file_path)
 {
@@ -6,54 +76,29 @@ Media *createMediaChannl(const char *app, int stream_type, const char *file_path
     if (!media)
         return NULL;
 
-    media->fp = fopen(file_path, "rb+");
-    if (!media->fp)
+    Buffer *buffer = _readH264Nalu(media, file_path);
+    if (!buffer)
+        return NULL;
+    
+    media->frame_fifo = createFifiQueue();
+    if (!media->frame_fifo)
         return NULL;
 
-    fseek(media->fp, 0, SEEK_END);
-    long fileSize = ftell(media->fp);
-    fseek(media->fp, 0, SEEK_SET);
+    while (1) if (_runMediaStream(media, buffer)) break;
 
-    media->buffer = createBuffer(fileSize);
-    if (!media->buffer)
-        return NET_FAIL;
+    FREE(buffer);
 
-    fread(media->buffer->data, 1, fileSize, media->fp);
+    if (media->pps && media->sps){
+        media->avc_buffer = rtmpAvcSequence(media->sps, media->pps);
+        if (!media->avc_buffer) 
+            return NULL;
+    }
 
-    fclose(media->fp);
+    FREE(media->sps);
+    FREE(media->pps);
 
     return media;
 }
 
-static void rtmp_paser_packet(uint8_t *data, int size, int type)
-{
-    LOG("type %d,%d", size, type);
-    Buffer *frame = createFrameBuffer(data, size, type, 0);
-}
-
-static int _runMediaStream(Media *media)
-{
-    if (media->buffer->index >= media->buffer->length)
-        return NET_FAIL;
-
-    int nal_start = 0, nal_end = 0;
-
-    int resp = find_nal_unit(media->buffer->data + media->buffer->index, media->buffer->length - media->buffer->index, &nal_start, &nal_end);
-    if (resp <= 0)
-        return NET_FAIL;
-
-    uint8_t *nalu_start = media->buffer->data + media->buffer->index + nal_start;
-
-    rtmp_paser_packet(nalu_start, nal_end - nal_start, (*nalu_start) & 0x1F);
-
-    media->buffer->index += nal_end - nal_start;
-
-    return NET_SUCCESS;
-}
-
-int startRunMediaStream(Media *media)
-{
-  
-}
 
 

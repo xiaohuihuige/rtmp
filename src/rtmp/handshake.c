@@ -2,54 +2,10 @@
 #include "type.h"
 #include "send_chunk.h"
 
-static void _buildHandShakeRandom(Buffer *buffer, int index)
+static void _buildHandShakeRandom(bs_t *b, int length)
 {
-    assert(buffer || buffer->length > index);
-
     srand(time(NULL));
-    int indexs = index;
-    while (buffer->length > indexs) {
-        writeBufferU1(buffer, indexs, 8, rand());
-        indexs++;
-    }
-}
-
-static Buffer *_buildHandShakeS0()
-{
-    Buffer *buffer = createBuffer(1);
-    if (!buffer) {
-        return NULL;
-    }
-
-    writeBufferU(buffer, 0, 8, 8, RTMP_VERSION);
-
-    return buffer;
-}
-
-static Buffer *_buildHandShakeS1()
-{
-    Buffer *buffer = createBuffer(RTMP_HANDSHAKE_SIZE);
-    if (!buffer) {
-        return NULL;
-    }
-
-    writeBufferU(buffer, 0, 8, 32, time(NULL));
-    writeBufferU(buffer, 4, 8, 32, 0);
-    _buildHandShakeRandom(buffer, 8);
-    return buffer;
-}
-
-static Buffer *_buildHandShakeS2()
-{
-    Buffer *buffer = createBuffer(RTMP_HANDSHAKE_SIZE);
-    if (!buffer) {
-        return NULL;
-    }
-
-    writeBufferU(buffer, 0, 8, 32, time(NULL));
-    writeBufferU(buffer, 4, 8, 32, 0);
-    _buildHandShakeRandom(buffer, 8);
-    return buffer;
+    while (length--) bs_write_u8(b, rand());
 }
 
 static int _sendHandShakeS0S1S2(RtmpSession *session, Buffer *buffer)
@@ -58,33 +14,24 @@ static int _sendHandShakeS0S1S2(RtmpSession *session, Buffer *buffer)
     if (!send_buffer)
         return NET_FAIL;
 
-    Buffer *v_buffer = NULL;
-    Buffer *s1_buffer = NULL;
-    Buffer *s2_buffer = NULL;
+    bs_t *b = bs_new(send_buffer->data, send_buffer->length);
+    if (!b)
+        return NET_FAIL;
 
-    do {
-        v_buffer = _buildHandShakeS0();
-        if (!v_buffer)
-            break;
 
-        s1_buffer = _buildHandShakeS1();
-        if (!s1_buffer)
-            break;
+    bs_write_u8(b, RTMP_VERSION);
 
-        s2_buffer = _buildHandShakeS2();
-        if (!s2_buffer)
-            break;
+    bs_write_u(b, 32, time(NULL));
+    bs_write_u(b, 32, 0);
+    _buildHandShakeRandom(b, RTMP_HANDSHAKE_SIZE - 8);
 
-        writeBuffer(send_buffer, 0, v_buffer->data, v_buffer->length);
-        writeBuffer(send_buffer, v_buffer->length, s1_buffer->data, s1_buffer->length);
-        writeBuffer(send_buffer, v_buffer->length + s1_buffer->length, s2_buffer->data, s2_buffer->length);
-        sendToClient(session, send_buffer->data, send_buffer->length);
+    bs_write_u(b, 32, time(NULL));
+    bs_write_u(b, 32, 0);
+    _buildHandShakeRandom(b, RTMP_HANDSHAKE_SIZE - 8);
 
-    } while (0);
+    sendToClient(session, send_buffer->data, send_buffer->length);
 
-    FREE(v_buffer);
-    FREE(s1_buffer);
-    FREE(s2_buffer);
+    FREE(b);
     FREE(send_buffer);
 
     return NET_SUCCESS;
