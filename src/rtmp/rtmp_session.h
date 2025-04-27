@@ -16,14 +16,16 @@ typedef struct
    RtmpPacket *packet;
    SessionConfig config;
    TaskTimer *stream_task;
-   Media *media;
    Buffer *buffer;
    bs_t *b;
+   Media *media;
+   int index;
 } RtmpSession;
 
 RtmpSession *createRtmpSession(Seesion *conn);
 void destroyRtmpSession(RtmpSession *session);
 void recvRtmpSession(RtmpSession *session, Buffer *buffer);
 int addRtmpPushTask(RtmpSession *session);
+int findMediaStreamChannl(RtmpSession *session);
 
 #endif

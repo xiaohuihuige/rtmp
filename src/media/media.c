@@ -97,8 +97,32 @@ Media *createMediaChannl(const char *app, int stream_type, const char *file_path
     FREE(media->sps);
     FREE(media->pps);
 
+    media->frame_count = list_count_nodes(&media->frame_fifo->list);
+
+    snprintf(media->app, sizeof(media->app), "%s", app);
+
+    LOG("media create success %p, frame count %d, media name %s", media, media->frame_count, media->app);
+
     return media;
 }
 
 
+Buffer *getMediaStreamFrame(Media *media, int index)
+{
+    if (media->frame_count <= index)
+        return NULL;
 
+    int count = 0;
+
+    FifoQueue *pos = NULL;
+
+    list_for_each_entry(pos, &media->frame_fifo->list, list) 
+    {
+        if (count == index) {
+            return pos->task; // 找到指定索引的数据
+        }
+        count++;
+    }
+    
+    return NULL; // 如果索引超出范围，返回 NULL
+}

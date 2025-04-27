@@ -15,6 +15,8 @@ int rtmpSendConnect(RtmpSession *session, HeaderChunk *header, int code, double 
 
     sendConnectResult(session, buffer, transactionId);
 
+    findMediaStreamChannl(session);
+
     FREE(buffer);
 
     return NET_SUCCESS; 

@@ -4,6 +4,8 @@
 #include "chunk_header.h"
 #include "rtmp_event.h"
 #include "send_chunk.h"
+#include "rtmp_server.h"
+#include "amf0.h"
 
 RtmpSession *createRtmpSession(Seesion *conn)
 {
@@ -16,10 +18,8 @@ RtmpSession *createRtmpSession(Seesion *conn)
     session->packet = NULL;
     session->stream_task = NULL;
 
-    session->interval = 33;
-    session->base_time = 0;
-
-    session->media = createMediaChannl("app", 0, "test.h264");
+    session->interval = 40;
+    session->base_time = 1000;
 
     session->buffer = createBuffer(20 + RTMP_OUTPUT_CHUNK_SIZE);
     if (!session->buffer)
@@ -28,6 +28,9 @@ RtmpSession *createRtmpSession(Seesion *conn)
     session->b = bs_new(session->buffer->data, session->buffer->length);
     if (!session->b)
         return NULL;
+
+    session->media = NULL;
+    session->index = 0;
 
     return session;
 }
@@ -38,29 +41,59 @@ void destroyRtmpSession(RtmpSession *session)
     FREE(session);
 }
 
-static int _runRtmpPushStream(RtmpSession *session)
+static int _runRtmpPushStream(void *args)
 {
-    FifoQueue *node = dequeue(session->media->frame_fifo);
-    if (!node)
+    if (!args)
         return NET_FAIL;
 
-    sendFrameStream(session, node->task, session->base_time);
+    RtmpSession *session = args;
+
+    Buffer *frame = getMediaStreamFrame(session->media, session->index);
+    if (!frame) {
+        session->index = 0;
+        return NET_FAIL;
+    }
+
+    //LOG("index %d, type %d", session->index, frame->frame_type);
+
+    if (frame->frame_type == NAL_UNIT_TYPE_CODED_SLICE_IDR)
+        sendFrameStream(session, session->media->avc_buffer, session->base_time);
+
+    sendFrameStream(session, frame, session->base_time);
 
     session->base_time += session->interval;
 
-    FREE(node->task);
-    FREE(node);
-    
+    session->index++;
+
+    return NET_SUCCESS;
+}
+
+int findMediaStreamChannl(RtmpSession *session)
+{
+    if (!session)
+        return NET_FAIL;
+
+    session->media = findRtmpServerStream((RtmpServer *)session->conn->tcps->parent, session->config.app);
+    if (!session->media) {
+        ERR("find rtmp stream error");
+        return NET_FAIL;
+    }
+
+    LOG("find stream %p", session->media);
+
     return NET_SUCCESS;
 }
 
 int addRtmpPushTask(RtmpSession *session)
 {
-    sendFrameStream(session, session->media->avc_buffer, session->base_time);
+    if (!session->media)
+        return NET_FAIL;
 
-    session->stream_task = addTimerTask(session->conn->tcps->scher, 2000, 30, _runRtmpPushStream, session);
+    session->stream_task = addTimerTask(session->conn->tcps->scher, 0, 40, _runRtmpPushStream, (void *)session);
     if (!session->stream_task)
         return NET_FAIL;
+
+    return NET_SUCCESS;
 }
 
 static int _parseFirstChunkPacket(RtmpPacket *packet, Buffer *buffer)
@@ -158,7 +191,7 @@ static void _parseRtmpChunk(RtmpSession *session, Buffer *buffer)
 {
     assert(buffer);
 
-    //printfChar(buffer->data, buffer->length);
+    printfChar(buffer->data, buffer->length);
 
     while (1) {
         if (session->packet) {

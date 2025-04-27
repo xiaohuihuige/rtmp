@@ -22,7 +22,7 @@ static void _buildWriteOnstatus(bs_t *b,  double transactionId, const char* leve
 static void _buildSampleAccess(bs_t *b,  double stream_id, const char *sample_access);
 static void _buildOnMetaData(bs_t *b, int width, int height, int displayWidth, int displayHeight, int duration, int framerate, int fps, int videodatarate, int videocodecid, int audiodatarate, int audiocodecid, int profile, int level);
 static void _buildStreamIsRecord(bs_t *b, uint32_t streamId);
-static void _buildconnectCommand(bs_t *b, double transactionId);
+
 
 
 static void _buildPeerBandwidth(bs_t *b, uint32_t window_size, uint8_t limit_type)
@@ -251,7 +251,7 @@ static void _buildConnectResult(bs_t *b,
         .fmt = RTMP_CHUNK_TYPE_0,
         .csid = RTMP_CHANNEL_INVOKE,
         .timestamp = 0,
-        .length = 205,
+        .length = length, //205
         .type_id = RTMP_TYPE_INVOKE,
         .stream_id = 0,
     };
@@ -393,19 +393,19 @@ static void _buildOnMetaData(bs_t *b,
 
 	amf_write_object(b);
 	amf_write_NamedString(b, "Server", strlen("Server"), "nginx-rtmp-module", strlen("nginx-rtmp-module"));
-	amf_write_NamedDouble(b,  "width",   strlen("width"),  1280);
-	amf_write_NamedDouble(b,  "height",  strlen("height"),  720);
-	amf_write_NamedDouble(b,  "displayWidth",   strlen("displayWidth"),  1280);
-	amf_write_NamedDouble(b,  "displayHeight",   strlen("displayHeight"),  720);
-	amf_write_NamedDouble(b,  "duration",   strlen("duration"),  0);
-	amf_write_NamedDouble(b,  "framerate",   strlen("framerate"),  30);
-	amf_write_NamedDouble(b,  "fps",         strlen("fps"),  30);
-	amf_write_NamedDouble(b,  "videodatarate",   strlen("videodatarate"),  0);
-	amf_write_NamedDouble(b,  "videocodecid",   strlen("videocodecid"),  7);
-	amf_write_NamedDouble(b,  "audiodatarate",   strlen("audiodatarate"),  0);
-	amf_write_NamedDouble(b,  "audiocodecid",   strlen("audiocodecid"),  0);
-	amf_write_NamedString(b, "profile", strlen("profile"), "", 0);
-	amf_write_NamedString(b, "level", strlen("level"),  "", 0);
+	amf_write_NamedDouble(b,  "width",   strlen("width"),  width);
+	amf_write_NamedDouble(b,  "height",  strlen("height"),  height);
+	amf_write_NamedDouble(b,  "displayWidth",   strlen("displayWidth"),  displayWidth);
+	amf_write_NamedDouble(b,  "displayHeight",   strlen("displayHeight"),  displayHeight);
+	amf_write_NamedDouble(b,  "duration",   strlen("duration"),  duration);
+	amf_write_NamedDouble(b,  "framerate",   strlen("framerate"),  framerate);
+	amf_write_NamedDouble(b,  "fps",         strlen("fps"),  fps);
+	amf_write_NamedDouble(b,  "videodatarate",   strlen("videodatarate"),  videodatarate);
+	amf_write_NamedDouble(b,  "videocodecid",   strlen("videocodecid"),  videocodecid);
+	amf_write_NamedDouble(b,  "audiodatarate",   strlen("audiodatarate"),  audiodatarate);
+	amf_write_NamedDouble(b,  "audiocodecid",   strlen("audiocodecid"),  audiocodecid);
+	amf_write_NamedString(b, "profile", strlen("profile"), "", profile);
+	amf_write_NamedString(b, "level", strlen("level"),  "", level);
 	amf_write_objectEnd(b);
 }
 
@@ -568,7 +568,10 @@ int sendOnMetaData(RtmpSession *session, Buffer *buffer)
     if (!b) 
         return NET_FAIL;
 
-    _buildOnMetaData(b, 1280, 720, 1280, 720, 0, 30, 30, 0, 7, 0, 0, 0, 0);
+    _buildOnMetaData(b, WIDTH_1280, Height_720, 
+            DISPLAY_WIDTH_1280, DISPLAY_Height_720, DURATION, 
+            FRAMERATE, FPS, VIDEODATARATE, 
+            VIDEOCODECID, AUDIODATARATE, AUDIOCODECID, PROFILE, LEVEL);
 
     sendToClient(session, buffer->data, bs_pos(b));
 

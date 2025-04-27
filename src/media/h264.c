@@ -207,6 +207,8 @@ void read_seq_parameter_set_rbsp(sps_t *sps, bs_t *b)
     sps->pic_height_in_map_units_minus1 = bs_read_ue(b);
     int width = (sps->pic_width_in_mbs_minus1 + 1) * 16;
     int height = (sps->pic_height_in_map_units_minus1 + 1) * 16;
+    printf("width %d, height %d", width, height);
+
     sps->frame_mbs_only_flag = bs_read_u1(b);
     if (!sps->frame_mbs_only_flag)
     {

@@ -23,6 +23,20 @@
 #define RTMP_FRAME_HEADER_LENGTH 9
 #define RTMP_AVC_HEADER_LENGTH   16
 
+#define WIDTH_1280 			1280
+#define Height_720 			720
+#define DISPLAY_WIDTH_1280 	1280
+#define DISPLAY_Height_720 720
+#define DURATION 				0
+#define FRAMERATE 30
+#define FPS 30
+#define VIDEODATARATE 0
+#define VIDEOCODECID 7
+#define AUDIODATARATE 0
+#define AUDIOCODECID 0
+#define PROFILE 0
+#define LEVEL 0
+
 enum {
     NAL_UNIT_TYPE_UNSPECIFIED = 0,                    // Unspecified
     NAL_UNIT_TYPE_CODED_SLICE_NON_IDR,                // Coded slice of a non-IDR picture

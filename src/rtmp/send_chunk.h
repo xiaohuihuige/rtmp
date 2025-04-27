@@ -5,9 +5,22 @@
 
 static inline int sendToClient(RtmpSession *session, uint8_t *data, int len)
 {
-    DBG("[send message fd:%d, length: %d]", session->conn->fd, len);
     //printfChar(data, len);
-    return send(session->conn->fd, data, len, 0);
+    ssize_t bytes_sent = send(session->conn->fd, data, len, MSG_NOSIGNAL);
+    if (bytes_sent <= 0) {
+        if (errorReSend(session->conn->fd)) {
+            ERR("send() failed: %s", strerror(errno));
+        } else {
+            bytes_sent = send(session->conn->fd, data, len, MSG_NOSIGNAL);
+            if (bytes_sent <= 0) { 
+                ERR("send() failed: %s", strerror(errno));
+            }
+        }
+    } else {
+        //DBG("[send message fd:%d, length: %d]", session->conn->fd, len);
+    }
+
+    return bytes_sent;
 }
 
 int sendFrameStream(RtmpSession *session, Buffer *frame, uint32_t timestamp);

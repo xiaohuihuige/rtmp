@@ -15,9 +15,12 @@ typedef struct
     Buffer *sps;
     FifoQueue *frame_fifo;
     Buffer *avc_buffer;
+    int frame_count;
 } Media;
 
 Media *createMediaChannl(const char *app, int stream_type, const char *file_path);
+
+Buffer *getMediaStreamFrame(Media *media, int index);
 
 #endif // !__MEDIA_H__
 
