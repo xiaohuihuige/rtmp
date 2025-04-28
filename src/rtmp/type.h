@@ -127,6 +127,21 @@ enum
 	RTMP_EVENT_BUFFER_READY			= 0x20,
 };
 
+enum
+{
+	RTMP_AMF_EVENT_USE				= 1,
+	RTMP_AMF_EVENT_RELEASE			= 2,
+	RTMP_AMF_EVENT_REQUEST_CHANGE	= 3,
+	RTMP_AMF_EVENT_CHANGE			= 4,
+	RTMP_AMF_EVENT_SUCCESS			= 5,
+	RTMP_AMF_EVENT_SEND_MESSAGE		= 6,
+	RTMP_AMF_EVENT_STATUS			= 7,
+	RTMP_AMF_EVENT_CLEAR			= 8,
+	RTMP_AMF_EVENT_REMOVE			= 9,
+	RTMP_AMF_EVENT_REQUEST_REMOVE	= 10,
+	RTMP_AMF_EVENT_USE_SUCCESS		= 11,
+};
+
 enum rtmp_channel_t
 {
 	RTMP_CHANNEL_PROTOCOL = 2, // Protocol Control Messages (1,2,3,5,6) & User Control Messages Event (4)
@@ -177,5 +192,18 @@ typedef struct
 	double encoding;
 	char pageUrl[256]; // http://host/sample.html
 } SessionConfig;
+
+typedef struct
+{
+    uint32_t in_chunk_size;    // read from network
+    uint32_t out_chunk_size;   // write to network
+    uint32_t sequence_number;  // bytes read report
+    uint32_t window_size;      // server bandwidth (2500000)
+    uint32_t peer_bandwidth;   // client bandwidth
+    uint32_t buffer_length_ms; // s -> c
+    uint8_t  limit_type;       // client bandwidth limit
+    uint8_t  receive_audio;    // client don't want receive audio
+    uint8_t  receive_video;
+} TransmissionConfig;
 
 #endif

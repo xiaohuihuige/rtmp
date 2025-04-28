@@ -37,6 +37,11 @@ Buffer *rtmpWriteFrame(Buffer *frame)
 
 Buffer *rtmpAvcSequence(Buffer *sps_frame, Buffer *pps_frame)
 {
+    if (!sps_frame || !pps_frame) {
+        ERR("args sps frame, pps frame is null");
+        return NULL;
+    }
+
     int length = sps_frame->length + pps_frame->length + RTMP_AVC_HEADER_LENGTH;
 
     Buffer *buffer = createBuffer(length);
@@ -120,14 +125,13 @@ int sendScriptStream(RtmpSession *session, Buffer *frame, uint32_t timestamp)
 
 int sendRtmpPacket(RtmpSession *session, HeaderChunk *header, Buffer *frame)
 {
-    if (!session || !header || !frame)
+    if (!session || !header || !frame || header->length <= 0)
+    {
+        ERR("args error");
         return NET_FAIL;
-
-    if (header->length <= 0)
-        return NET_FAIL;
-
+    }
+ 
     while (frame->length > frame->index) {
-
         bs_init(session->b, session->buffer->data, session->buffer->length);
 
         writeChunkHeader(session->b, header);
@@ -144,7 +148,7 @@ int sendRtmpPacket(RtmpSession *session, HeaderChunk *header, Buffer *frame)
 
         header->fmt  = RTMP_CHUNK_TYPE_3;
     }
-
+    frame->index = 0;
     return NET_SUCCESS;
 }
 

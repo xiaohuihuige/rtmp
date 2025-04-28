@@ -77,10 +77,10 @@ int main()
     
     RtmpServer * rtmp = createRtmpServer(DEFAULT_IP, SERVER_PORT);
 
-    addRtmpServerStream(rtmp, createMediaChannl("app", 0, "./example/test.h264"));
-    addRtmpServerStream(rtmp, createMediaChannl("live", 0, "./example/test1.h264"));
-    addRtmpServerStream(rtmp, createMediaChannl("girl", 0, "./example/girl.h264"));
-    addRtmpServerStream(rtmp, createMediaChannl("mountain", 0, "./example/mountain.h264"));
+    addRtmpServerStream(rtmp, createMediaChannl("app", 0, "./resources/test.h264"));
+    addRtmpServerStream(rtmp, createMediaChannl("live", 0, "./resources/test1.h264"));
+    addRtmpServerStream(rtmp, createMediaChannl("girl", 0, "./resources/girl.h264"));
+    addRtmpServerStream(rtmp, createMediaChannl("mountain", 0, "./resources/mountain.h264"));
 
     while (keep_running) sleep(1);
 

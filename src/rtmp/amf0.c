@@ -25,21 +25,6 @@ static inline void printfAMFMessage(char *message, int code)
     }
 }
 
-
-void printfChar(uint8_t *data, int len)
-{
-    LOG("byte len %d", len);
-    for (int i = 0; i < len; i++) {
-        fprintf(stderr, "%02x ", data[i]);
-        if ((i + 1) % 8 == 0 && i != 0)
-            fprintf(stderr, "    ");
-
-        if ((i+1) % 16 == 0 && i != 0)
-            fprintf(stderr, " [%d]\n", i + 1);
-    }
-    fprintf(stderr, "\n");
-}
-
 //1 bytes
 int amf_write_null(bs_t *b)
 {

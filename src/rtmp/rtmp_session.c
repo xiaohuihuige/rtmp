@@ -48,16 +48,16 @@ static int _runRtmpPushStream(void *args)
 
     RtmpSession *session = args;
 
-    Buffer *frame = getMediaStreamFrame(session->media, session->index);
+    Buffer *frame = getMediaFrame(session->media, session->index);
     if (!frame) {
         session->index = 0;
         return NET_FAIL;
     }
 
-    //LOG("index %d, type %d", session->index, frame->frame_type);
+    //LOG("%p, %p, index %d, type %d, length %d", session, frame, session->index, frame->frame_type, frame->length);
 
     if (frame->frame_type == NAL_UNIT_TYPE_CODED_SLICE_IDR)
-        sendFrameStream(session, session->media->avc_buffer, session->base_time);
+        sendFrameStream(session, getMediaInfo(session->media), session->base_time);
 
     sendFrameStream(session, frame, session->base_time);
 
@@ -191,7 +191,7 @@ static void _parseRtmpChunk(RtmpSession *session, Buffer *buffer)
 {
     assert(buffer);
 
-    printfChar(buffer->data, buffer->length);
+    //printfChar(buffer->data, buffer->length);
 
     while (1) {
         if (session->packet) {

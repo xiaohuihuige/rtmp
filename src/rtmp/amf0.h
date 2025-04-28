@@ -78,8 +78,6 @@ int amf_read_object_item(bs_t *b, amf_object_item *item);
 int amf_read_object(bs_t *b, amf_object_item* items, size_t n);
 int amf_read_item(bs_t *b, amf_object_item *item, int size);
 
-void printfChar(uint8_t *data, int len);
-
 #ifdef __cplusplus
 }
 #endif
