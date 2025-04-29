@@ -40,7 +40,7 @@ RtmpSession *createRtmpSession(Seesion *conn)
 
     session->interval       = 40;
     session->base_time      = 1000;
-    session->cache          = 0;
+
     LOG("create rtmp session success %p", session);
 
     return session;
