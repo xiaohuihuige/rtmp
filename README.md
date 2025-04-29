@@ -1,4 +1,4 @@
-# 一个轻量形的rtmp服务器
+# 一个轻量型的rtmp服务器
 # 运行
 ```
 ./build.sh
@@ -33,6 +33,7 @@ sysctl net.ipv4.tcp_wmem
 
 #设置大小
 sudo sysctl -w net.ipv4.tcp_wmem="4096  87380  12582912"
+sudo sysctl -w net.core.wmem_max="12582912"
 
 #生效
 sudo sysctl -p
