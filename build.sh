@@ -5,11 +5,15 @@ current_directory=$(pwd)
 
 function git_clone_schudule()
 {
-    # 克隆 Git 仓库
-    git clone https://github.com/xiaohuihuige/schudule.git
+	if [ ! -d "schudule" ]; then
+    	# 克隆 Git 仓库
+    	git clone https://github.com/xiaohuihuige/schudule.git
+	fi	
 
     # 进入目录
     cd schudule || { echo "进入目录失败"; exit 1; }
+	
+	git pull origin main || { echo "update git"; exit 1; }
 
     make clean || { echo "失败"; exit 1; }
 
@@ -22,12 +26,10 @@ function git_clone_schudule()
     echo "安装schudule成功！"
 }
 
-if [ ! -d "schudule" ]; then
-    git_clone_schudule
-fi
+git_clone_schudule
 
-sudo sysctl -w net.ipv4.tcp_wmem="4096  87380  12582912"
-
+sudo sysctl -w net.ipv4.tcp_wmem="4096  873800  12582912"
+sudo sysctl -w net.core.wmem_max="12582912"
 sudo sysctl -p
 
 # 返回上级目录
