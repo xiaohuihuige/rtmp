@@ -1,4 +1,10 @@
 # 一个轻量形的rtmp服务器
+# 运行
+```
+./build.sh
+
+```
+
 # 调试
 ```
 echo "/tmp/core.%e.%p" | sudo tee /proc/sys/kernel/core_pattern
