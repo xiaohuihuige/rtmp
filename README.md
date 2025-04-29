@@ -7,10 +7,10 @@
 # 拉流
 1. 下载VLC播放器
 2. 编译的结果打印里有播放地址
-![](./resources/1.png)
 3. 打开VLC, 打开媒体->打开网络串流
-![](./resources/2.png)
 4. 点击播放
+![](./resources/1.png)
+![](./resources/2.png)
 ![](./resources/3.png)
 ![](./resources/4.png)
 
