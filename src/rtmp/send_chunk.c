@@ -131,24 +131,26 @@ int sendRtmpPacket(RtmpSession *session, HeaderChunk *header, Buffer *frame)
         return NET_FAIL;
     }
  
-    while (frame->length > frame->index) {
+    int index = frame->index;
+
+    while (frame->length > index) {
         bs_init(session->b, session->buffer->data, session->buffer->length);
 
         writeChunkHeader(session->b, header);
 
-        int chunk_size = frame->length - frame->index < RTMP_OUTPUT_CHUNK_SIZE ? frame->length - frame->index : RTMP_OUTPUT_CHUNK_SIZE;
+        int chunk_size = frame->length - index < RTMP_OUTPUT_CHUNK_SIZE ? frame->length - index : RTMP_OUTPUT_CHUNK_SIZE;
         
-        bs_write_bytes(session->b, frame->data + frame->index, chunk_size);
+        bs_write_bytes(session->b, frame->data + index, chunk_size);
 
         int code = sendToClient(session, session->buffer->data, bs_pos(session->b));
         if (code <= 0)
-            break;
+            return NET_FAIL;
 
-        frame->index += chunk_size;
+        index += chunk_size;
 
         header->fmt  = RTMP_CHUNK_TYPE_3;
     }
-    frame->index = 0;
+
     return NET_SUCCESS;
 }
 

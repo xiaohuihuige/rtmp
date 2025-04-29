@@ -17,6 +17,7 @@ typedef struct
     void (*destroyMedia)(void *media);
     Buffer *(*getMediaFrame)(void *media, int index);
     Buffer *(*getMediaInfo)(void *media);
+    void *(*getMediaConfig)(void *media);
 } MediaFunc;
 
 typedef struct 
@@ -33,14 +34,18 @@ static inline int initStreamType(int stream_type, MediaFunc *func)
         func->destroyMedia  = destroyH264Media;
         func->getMediaFrame = getH264MediaFrame;
         func->getMediaInfo  = getH264MediaAVC;
+        func->getMediaConfig = getH264MediaConfig;
         return NET_SUCCESS;
     }
     return NET_FAIL;
 }
 
 Media *createMediaChannl(const char *app, int stream_type, const char *file_path);
+void destroyMediaChannl(Media *media);
+
 Buffer *getMediaFrame(Media *media, int index);
 Buffer *getMediaInfo(Media *media);
+void *getMediaConfig(Media *media);
 
 #endif // !__MEDIA_H__
 

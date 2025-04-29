@@ -136,7 +136,16 @@ sps_t *read_seq_parameter_set_rbsp(Buffer *buffer)
 
     memset(sps, 0, sizeof(sps_t));
 
-    bs_t *b = bs_new(buffer->data, buffer->length);
+    int nal_size = buffer->length;
+    int rbsp_size = buffer->length;
+
+    Buffer *rbsp_buffer = createBuffer(buffer->length);
+    if (!rbsp_buffer)
+        return NULL;
+
+    nal_to_rbsp(buffer->data, &nal_size, rbsp_buffer->data, &rbsp_size);
+
+    bs_t *b = bs_new(rbsp_buffer->data, rbsp_size);
     if (!b) {
         FREE(sps);
         return NULL;
@@ -217,9 +226,8 @@ sps_t *read_seq_parameter_set_rbsp(Buffer *buffer)
     sps->gaps_in_frame_num_value_allowed_flag = bs_read_u1(b);
     sps->pic_width_in_mbs_minus1 = bs_read_ue(b);
     sps->pic_height_in_map_units_minus1 = bs_read_ue(b);
-    int width = (sps->pic_width_in_mbs_minus1 + 1) * 16;
-    int height = (sps->pic_height_in_map_units_minus1 + 1) * 16;
-    ERR("width %d, height %d", width, height);
+    sps->width = (sps->pic_width_in_mbs_minus1 + 1) * 16;
+    sps->height = (sps->pic_height_in_map_units_minus1 + 1) * 16;
 
     sps->frame_mbs_only_flag = bs_read_u1(b);
     if (!sps->frame_mbs_only_flag)
@@ -241,5 +249,18 @@ sps_t *read_seq_parameter_set_rbsp(Buffer *buffer)
         read_vui_parameters(sps, b);
     }
 
+    float fps = 25.0;
+    if (sps->vui_parameters_present_flag && sps->vui.timing_info_present_flag)
+    {
+        fps = 1.0 * sps->vui.time_scale /sps->vui.num_units_in_tick;
+
+        fps /= 2.0; //FIXME: 
+        
+    }
+    sps->fps = fps;
+    
+    LOG("width %d, height %d, fps %d", sps->width, sps->height, sps->fps);
+
+    FREE(rbsp_buffer);
     return sps;
 }

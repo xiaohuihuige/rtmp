@@ -51,7 +51,7 @@ int rtmpSendOnplay(RtmpSession *session, HeaderChunk *header, int code, double t
 
     FREE(buffer);
 
-    addRtmpPushTask(session);
+    startPushStreamTask(session);
 
     return NET_SUCCESS; 
 }

@@ -64,6 +64,17 @@ error:
     return NULL;
 }
 
+void destroyMediaChannl(Media *media)
+{
+    if (!media)
+        return;
+
+    if (media->func.destroyMedia)
+        media->func.destroyMedia(media->func.media);
+
+    FREE(media);
+}
+
 
 Buffer *getMediaFrame(Media *media, int index)
 {
@@ -81,4 +92,11 @@ Buffer *getMediaInfo(Media *media)
     if (!media)
         return NULL;
     return media->func.getMediaInfo(media->func.media);
+}
+
+void *getMediaConfig(Media *media)
+{
+    if (!media)
+        return NULL;
+    return media->func.getMediaConfig(media->func.media);
 }

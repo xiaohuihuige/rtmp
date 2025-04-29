@@ -9,6 +9,7 @@
 
 typedef struct 
 {
+   int index;
    int interval;
    int base_time;
    int state;
@@ -19,13 +20,14 @@ typedef struct
    Buffer *buffer;
    bs_t *b;
    Media *media;
-   int index;
 } RtmpSession;
 
 RtmpSession *createRtmpSession(Seesion *conn);
 void destroyRtmpSession(RtmpSession *session);
 void recvRtmpSession(RtmpSession *session, Buffer *buffer);
-int addRtmpPushTask(RtmpSession *session);
+
+int startPushStreamTask(RtmpSession *session);
 int findMediaStreamChannl(RtmpSession *session);
+int stopPushStreamTask(RtmpSession *session);
 
 #endif

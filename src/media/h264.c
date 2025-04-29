@@ -56,7 +56,7 @@ static int _runMediaStream(FifoQueue *frame_queue, Buffer *buffer, H264Info *h26
     return NET_SUCCESS;
 }
 
-H264Media *createH264Media(Buffer *buffer)
+void *createH264Media(Buffer *buffer)
 {
     H264Media *media = CALLOC(1, H264Media); 
     if (!media)
@@ -69,6 +69,8 @@ H264Media *createH264Media(Buffer *buffer)
         goto error;
 
     while (1) if (_runMediaStream(media->frame_fifo, buffer, &h264_info)) break;
+
+    media->sps = read_seq_parameter_set_rbsp(h264_info.sps);
 
     media->avc_buffer = rtmpAvcSequence(h264_info.sps, h264_info.pps);
     if (!media->avc_buffer) 
@@ -86,30 +88,33 @@ error:
     FREE(h264_info.sps);
     FREE(h264_info.pps);
     destroyFifoQueue(media->frame_fifo, Buffer);
+    FREE(media->sps);
     FREE(media->avc_buffer);
     FREE(media);
     return NULL;
 }
 
-void destroyH264Media(H264Media *media)
+void destroyH264Media(void *media)
 {
     if (!media)
         return;
 
-    destroyFifoQueue(media->frame_fifo, Buffer);
-    FREE(media->avc_buffer);
+    destroyFifoQueue(((H264Media *)media)->frame_fifo, Buffer);
+    FREE(((H264Media *)media)->avc_buffer);
+    FREE(((H264Media *)media)->sps);
     FREE(media);
 }
 
-Buffer *getH264MediaFrame(H264Media *media, int index)
+Buffer *getH264MediaFrame(void *media, int index)
 {
-    if (media->frame_count <= index)
+    
+    if (((H264Media *)media)->frame_count <= index)
         return NULL;
 
     int count = 0;
     FifoQueue *pos = NULL;
 
-    list_for_each_entry(pos, &media->frame_fifo->list, list)  
+    list_for_each_entry(pos, &((H264Media *)media)->frame_fifo->list, list)  
     {
         if (count == index) {
             return pos->task; // 找到指定索引的数据
@@ -120,9 +125,18 @@ Buffer *getH264MediaFrame(H264Media *media, int index)
     return NULL; // 如果索引超出范围，返回 NULL
 }
 
-Buffer *getH264MediaAVC(H264Media *media)
+Buffer *getH264MediaAVC(void *media)
 {
     if (!media)
         return NULL;
-    return media->avc_buffer;
+
+    return ((H264Media *)media)->avc_buffer;
+}
+
+void *getH264MediaConfig(void *media)
+{
+    if (!media)
+        return NULL;
+
+    return ((H264Media *)media)->sps;
 }

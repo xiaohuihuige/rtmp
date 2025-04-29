@@ -10,38 +10,53 @@
 RtmpSession *createRtmpSession(Seesion *conn)
 {
     RtmpSession *session = CALLOC(1, RtmpSession);
-    if (!session)   
+    if (!session)  {
+        ERR("create session malloc error");
         return NULL;
-
-    session->conn  = conn;
-    session->state = RTMP_HANDSHAKE_UNINIT;
-    session->packet = NULL;
-    session->stream_task = NULL;
-
-    session->interval = 40;
-    session->base_time = 1000;
+    }
 
     session->buffer = createBuffer(20 + RTMP_OUTPUT_CHUNK_SIZE);
-    if (!session->buffer)
+    if (!session->buffer) {
+        ERR("create buffer fail");
+        FREE(session);
         return NULL;
+    }
+
 
     session->b = bs_new(session->buffer->data, session->buffer->length);
-    if (!session->b)
+    if (!session->b) {
+        ERR("create b bytes fail");
+        FREE(session->buffer);
+        FREE(session);
         return NULL;
+    }
 
-    session->media = NULL;
-    session->index = 0;
+    session->media          = NULL;
+    session->index          = 0;
+    session->conn           = conn;
+    session->state          = RTMP_HANDSHAKE_UNINIT;
+    session->packet         = NULL;
+    session->stream_task    = NULL;
+
+    session->interval       = 40;
+    session->base_time      = 1000;
+    session->cache          = 0;
+    LOG("create rtmp session success %p", session);
 
     return session;
 }
 
 void destroyRtmpSession(RtmpSession *session)
 {
-    LOG("close");
+    LOG("destroy Rtmp Session %p", session);
+    stopPushStreamTask(session);
+    FREE(session->buffer);
+    FREE(session->b);
+    FREE(session->packet);
     FREE(session);
 }
 
-static int _runRtmpPushStream(void *args)
+static int _pushStreamLoop(void *args)
 {
     if (!args)
         return NET_FAIL;
@@ -56,11 +71,13 @@ static int _runRtmpPushStream(void *args)
 
     //LOG("%p, %p, index %d, type %d, length %d", session, frame, session->index, frame->frame_type, frame->length);
 
-    if (frame->frame_type == NAL_UNIT_TYPE_CODED_SLICE_IDR)
+    if (frame->frame_type == NAL_UNIT_TYPE_CODED_SLICE_IDR) 
         sendFrameStream(session, getMediaInfo(session->media), session->base_time);
-
-    sendFrameStream(session, frame, session->base_time);
-
+        
+    int code = sendFrameStream(session, frame, session->base_time);
+    if (code != NET_SUCCESS) 
+        return stopPushStreamTask(session);
+    
     session->base_time += session->interval;
 
     session->index++;
@@ -79,17 +96,31 @@ int findMediaStreamChannl(RtmpSession *session)
         return NET_FAIL;
     }
 
-    LOG("find stream %p", session->media);
+    LOG("find stream %p, name %s", session->media, session->media->app);
 
     return NET_SUCCESS;
 }
 
-int addRtmpPushTask(RtmpSession *session)
+int stopPushStreamTask(RtmpSession *session)
 {
     if (!session->media)
         return NET_FAIL;
 
-    session->stream_task = addTimerTask(session->conn->tcps->scher, 0, 40, _runRtmpPushStream, (void *)session);
+    if (session->stream_task)
+        deleteTimerTask(session->stream_task);
+    session->stream_task = NULL;
+
+    return NET_SUCCESS;
+}
+
+int startPushStreamTask(RtmpSession *session)
+{
+    if (!session->media)
+        return NET_FAIL;
+
+    sps_t *sps = getMediaConfig(session->media);
+
+    session->stream_task = addTimerTask(session->conn->tcps->scher, 0, sps->fps + 10, _pushStreamLoop, (void *)session);
     if (!session->stream_task)
         return NET_FAIL;
 
@@ -173,12 +204,12 @@ static int _completeRtmpChunk(RtmpSession *session, Buffer *buffer)
         return NET_FAIL;
 
     if (_parseFirstChunkPacket(packet, buffer)) {
-        if (packet->header.length > 0) {
-            session->packet = packet; 
-        } else {
+        if (packet->header.length <= 0) {
             FREE(packet->buffer);
             FREE(packet);
+            return NET_FAIL;
         }
+        session->packet = packet; 
         return NET_FAIL;
     }
 
@@ -190,8 +221,6 @@ static int _completeRtmpChunk(RtmpSession *session, Buffer *buffer)
 static void _parseRtmpChunk(RtmpSession *session, Buffer *buffer)
 {
     assert(buffer);
-
-    //printfChar(buffer->data, buffer->length);
 
     while (1) {
         if (session->packet) {

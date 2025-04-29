@@ -568,10 +568,15 @@ int sendOnMetaData(RtmpSession *session, Buffer *buffer)
     if (!b) 
         return NET_FAIL;
 
-    _buildOnMetaData(b, WIDTH_1280, Height_720, 
-            DISPLAY_WIDTH_1280, DISPLAY_Height_720, DURATION, 
-            FRAMERATE, FPS, VIDEODATARATE, 
-            VIDEOCODECID, AUDIODATARATE, AUDIOCODECID, PROFILE, LEVEL);
+    sps_t *sps = getMediaConfig(session->media);
+
+    LOG("media info width %d, height %d, fps %d, profile %d, level %d",
+        sps->width, sps->height, sps->fps, sps->profile_idc, sps->level_idc);
+
+    _buildOnMetaData(b, sps->width, sps->height, 
+            sps->width, sps->height, DURATION, 
+            sps->fps, sps->fps, VIDEODATARATE, 
+            VIDEOCODECID, AUDIODATARATE, AUDIOCODECID, 0, 0);
 
     sendToClient(session, buffer->data, bs_pos(b));
 

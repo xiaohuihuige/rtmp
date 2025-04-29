@@ -101,7 +101,9 @@ typedef struct
 
     hrd_t hrd_nal;
     hrd_t hrd_vcl;
-
+    int width;
+    int height;
+    int fps;
 } sps_t;
 
 sps_t *read_seq_parameter_set_rbsp(Buffer *buffer);
