@@ -20,7 +20,7 @@ static void _printfRtmpAddr(int port, const char *app)
 {
     char play_ip[64] = {0};
 
-    getHostAddrs("eth0", play_ip, sizeof(play_ip));
+    getHostAddrs(play_ip, sizeof(play_ip));
 
     LOG("play rtmp address 【rtmp://%s:%d/%s】", play_ip, port, app);
 }
