@@ -26,6 +26,10 @@ if [ ! -d "schudule" ]; then
     git_clone_schudule
 fi
 
+sudo sysctl -w net.ipv4.tcp_wmem="4096  87380  12582912"
+
+sudo sysctl -p
+
 # 返回上级目录
 cd $current_directory || { echo "返回上级目录失败"; exit 1; }
 
