@@ -1,20 +1,37 @@
 
 #!/bin/bash
 
-# 克隆 Git 仓库
-git clone https://github.com/xiaohuihuige/schudule.git
+current_directory=$(pwd)
 
-# 进入目录
-cd schudule || { echo "进入目录失败"; exit 1; }
+function git_clone_schudule()
+{
+    # 克隆 Git 仓库
+    git clone https://github.com/xiaohuihuige/schudule.git
 
-# 编译项目
-make || { echo "编译失败"; exit 1; }
+    # 进入目录
+    cd schudule || { echo "进入目录失败"; exit 1; }
 
-# 安装项目
-sudo make install || { echo "安装失败"; exit 1; }
+    make clean || { echo "失败"; exit 1; }
 
-echo "安装schudule成功！"
+    # 编译项目
+    make || { echo "编译失败"; exit 1; }
 
-cd -
+    # 安装项目
+    sudo make install || { echo "安装失败"; exit 1; }
 
-make 
+    echo "安装schudule成功！"
+}
+
+if [ ! -d "schudule" ]; then
+    git_clone_schudule
+fi
+
+# 返回上级目录
+cd $current_directory || { echo "返回上级目录失败"; exit 1; }
+
+make clean || { echo "失败"; exit 1; }
+
+# 运行 make 命令（如果需要）
+make || { echo "rtmp 编译失败"; exit 1; }
+
+echo "编译成功！"
