@@ -22,7 +22,7 @@ static void _printfRtmpAddr(int port, const char *app)
 
     getHostAddrs("eth0", play_ip, sizeof(play_ip));
 
-    LOG("play rtmp address rtmp://%s:%d/%s", play_ip, port, app);
+    LOG("play rtmp address 【rtmp://%s:%d/%s】", play_ip, port, app);
 }
 
 static void _closeMeidaStream(RtmpServer *rtmp)
@@ -79,7 +79,7 @@ void destroyRtmpServer(RtmpServer *rtmp)
 
     if (rtmp->stream)
         _closeMeidaStream(rtmp);
-        
+
     FREE(rtmp);
 }
 

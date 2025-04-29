@@ -40,7 +40,7 @@ RtmpSession *createRtmpSession(Seesion *conn)
 
     session->interval       = 40;
     session->base_time      = 1000;
-
+    session->cache          = 0;
     LOG("create rtmp session success %p", session);
 
     return session;
@@ -54,6 +54,31 @@ void destroyRtmpSession(RtmpSession *session)
     FREE(session->b);
     FREE(session->packet);
     FREE(session);
+}
+
+static void _sendStreamGopCache(RtmpSession *session)
+{
+    while (1) {
+        Buffer *frame = getMediaFrame(session->media, session->index);
+        if (!frame) {
+            session->index = 0;
+            break;
+        }
+
+        if (frame->frame_type == NAL_UNIT_TYPE_CODED_SLICE_IDR) {
+            if (session->cache == 1)
+                break;
+
+            sendFrameStream(session, getMediaInfo(session->media), session->base_time);
+            session->cache = 1;
+        }
+
+        sendFrameStream(session, frame, session->base_time);
+
+        session->base_time += session->interval;
+
+        session->index++;
+    }
 }
 
 static int _pushStreamLoop(void *args)
@@ -118,6 +143,8 @@ int startPushStreamTask(RtmpSession *session)
     if (!session->media)
         return NET_FAIL;
 
+    _sendStreamGopCache(session);
+
     sps_t *sps = getMediaConfig(session->media);
 
     session->stream_task = addTimerTask(session->conn->tcps->scher, 0, sps->fps + 10, _pushStreamLoop, (void *)session);
@@ -148,7 +175,7 @@ static int _parseFirstChunkPacket(RtmpPacket *packet, Buffer *buffer)
         buffer->index += residue + packet->header.header_len;
     }
 
-    LOG("first packet, [%p, body length %d, index %d], [%p, revc buffer length %d, index %d], ", packet, packet->header.length, packet->index, buffer, buffer->length, buffer->index);
+    //LOG("first packet, [%p, body length %d, index %d], [%p, revc buffer length %d, index %d], ", packet, packet->header.length, packet->index, buffer, buffer->length, buffer->index);
     
     if (packet->index != packet->header.length) 
         return NET_FAIL;
@@ -162,8 +189,8 @@ static int _parseLastChunkPacket(RtmpPacket *packet, Buffer *buffer)
 
     int residue = packet->header.length - packet->index;
 
-    LOG("last packet, [%p, body length %d, index %d], [%p revc buffer length %d, index %d]", 
-        packet, packet->header.length, packet->index, buffer, buffer->length, buffer->index);
+    // LOG("last packet, [%p, body length %d, index %d], [%p revc buffer length %d, index %d]", 
+    //     packet, packet->header.length, packet->index, buffer, buffer->length, buffer->index);
 
     if (residue > 0) {
 
@@ -175,8 +202,8 @@ static int _parseLastChunkPacket(RtmpPacket *packet, Buffer *buffer)
 
         buffer->index += need_len;
 
-        LOG("end packet, [%p, body length %d, index %d], [%p, revc buffer length %d, index %d]", 
-            packet, packet->header.length, packet->index, buffer, buffer->length, buffer->index);
+        // LOG("end packet, [%p, body length %d, index %d], [%p, revc buffer length %d, index %d]", 
+        //     packet, packet->header.length, packet->index, buffer, buffer->length, buffer->index);
     }
 
     if (packet->index != packet->header.length) 
@@ -262,7 +289,7 @@ static void _checkChunkComplete(Buffer *buffer)
 
 void recvRtmpSession(RtmpSession *session, Buffer *buffer)
 {
-    LOG("recv size:%d, %p", buffer->length, session);
+    //LOG("recv size:%d, %p", buffer->length, session);
 
     _checkChunkComplete(buffer);
 

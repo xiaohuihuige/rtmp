@@ -6,22 +6,22 @@
 
 static void _buildPeerBandwidth(bs_t *b, uint32_t window_size, uint8_t limit_type);
 static void _buildSetChunkSize(bs_t *b, int chunk_size);
-static void _buildSetAbort(bs_t *b, uint32_t chunk_streamid);
-static void _buildSetAcknowledgement(bs_t *b, uint32_t sequence_number);
+void _buildSetAbort(bs_t *b, uint32_t chunk_streamid);
+void _buildSetAcknowledgement(bs_t *b, uint32_t sequence_number);
 static void _buildWindowAcknowledgementSize(bs_t *b, uint32_t window_size);
 static void _buildSetStreamBegin(bs_t *b, uint32_t streamId);
-static void _buildSetStreamEof(bs_t *b, uint32_t streamId);
-static void _buildStreamDry(bs_t *b, uint32_t streamId);
-static void _buildSetBufferLength(bs_t *b, uint32_t streamId, uint32_t ms);
-static void _buildSetStreamIsRecord(bs_t *b, uint32_t streamId);
-static void _buildSetPing(bs_t *b, uint32_t timstamp);
-static void _buildSetPong(bs_t *b, uint32_t timstamp);
+void _buildSetStreamEof(bs_t *b, uint32_t streamId);
+void _buildStreamDry(bs_t *b, uint32_t streamId);
+void _buildSetBufferLength(bs_t *b, uint32_t streamId, uint32_t ms);
+void _buildSetStreamIsRecord(bs_t *b, uint32_t streamId);
+void _buildSetPing(bs_t *b, uint32_t timstamp);
+void _buildSetPong(bs_t *b, uint32_t timstamp);
 static void _buildConnectResult(bs_t *b, double transactionId, const char* fmsver, double capabilities, const char* code, const char* level, const char* description, double encoding);
 static void _buildCreateStreanResult(bs_t *b, double transactionId, double stream_id);
 static void _buildWriteOnstatus(bs_t *b,  double transactionId, const char* level, const char* code, const char* description);
 static void _buildSampleAccess(bs_t *b,  double stream_id, const char *sample_access);
 static void _buildOnMetaData(bs_t *b, int width, int height, int displayWidth, int displayHeight, int duration, int framerate, int fps, int videodatarate, int videocodecid, int audiodatarate, int audiocodecid, int profile, int level);
-static void _buildStreamIsRecord(bs_t *b, uint32_t streamId);
+void _buildStreamIsRecord(bs_t *b, uint32_t streamId);
 
 
 
@@ -58,7 +58,7 @@ static void _buildSetChunkSize(bs_t *b, int chunk_size)
     bs_write_u(b, 32, chunk_size & 0x7FFFFFFF);
 }
 
-static void _buildSetAbort(bs_t *b, uint32_t chunk_streamid)
+void _buildSetAbort(bs_t *b, uint32_t chunk_streamid)
 {
     HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_0,
@@ -74,7 +74,7 @@ static void _buildSetAbort(bs_t *b, uint32_t chunk_streamid)
     bs_write_u(b, 32, chunk_streamid);
 }
 
-static void _buildSetAcknowledgement(bs_t *b, uint32_t sequence_number)
+void _buildSetAcknowledgement(bs_t *b, uint32_t sequence_number)
 {
     HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_0,
@@ -124,7 +124,7 @@ static void _buildSetStreamBegin(bs_t *b, uint32_t streamId)
 }
 
 
-static void _buildSetStreamEof(bs_t *b, uint32_t streamId)
+void _buildSetStreamEof(bs_t *b, uint32_t streamId)
 {
     HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_0,
@@ -141,7 +141,7 @@ static void _buildSetStreamEof(bs_t *b, uint32_t streamId)
     bs_write_u(b, 32, streamId);
 }
 
-static void _buildStreamDry(bs_t *b, uint32_t streamId)
+void _buildStreamDry(bs_t *b, uint32_t streamId)
 {
     HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_0,
@@ -158,7 +158,7 @@ static void _buildStreamDry(bs_t *b, uint32_t streamId)
     bs_write_u(b, 32, streamId);
 }   
 
-static void _buildSetBufferLength(bs_t *b, uint32_t streamId, uint32_t ms)
+void _buildSetBufferLength(bs_t *b, uint32_t streamId, uint32_t ms)
 {
     HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_0,
@@ -176,7 +176,7 @@ static void _buildSetBufferLength(bs_t *b, uint32_t streamId, uint32_t ms)
     bs_write_u(b, 32, ms);
 }
 
-static void _buildSetStreamIsRecord(bs_t *b, uint32_t streamId)
+void _buildSetStreamIsRecord(bs_t *b, uint32_t streamId)
 {
 	HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_0,
@@ -193,7 +193,7 @@ static void _buildSetStreamIsRecord(bs_t *b, uint32_t streamId)
     bs_write_u(b, 32, streamId);
 }
 
-static void _buildSetPing(bs_t *b, uint32_t timstamp)
+void _buildSetPing(bs_t *b, uint32_t timstamp)
 {
 	HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_0,
@@ -210,7 +210,7 @@ static void _buildSetPing(bs_t *b, uint32_t timstamp)
     bs_write_u(b, 32, timstamp);
 }
 
-static void _buildSetPong(bs_t *b, uint32_t timstamp)
+void _buildSetPong(bs_t *b, uint32_t timstamp)
 {
     HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_0,
@@ -409,7 +409,7 @@ static void _buildOnMetaData(bs_t *b,
 	amf_write_objectEnd(b);
 }
 
-static void _buildStreamIsRecord(bs_t *b, uint32_t streamId)
+void _buildStreamIsRecord(bs_t *b, uint32_t streamId)
 {
     HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_0,

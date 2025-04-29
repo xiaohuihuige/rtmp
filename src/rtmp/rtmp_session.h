@@ -9,6 +9,7 @@
 
 typedef struct 
 {
+   int cache;
    int index;
    int interval;
    int base_time;

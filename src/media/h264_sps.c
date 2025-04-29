@@ -1,4 +1,5 @@
 #include "h264_sps.h"
+#include "h264_nal.h"
 
 void read_hrd_parameters(hrd_t *hrd, bs_t *b)
 {
@@ -258,8 +259,8 @@ sps_t *read_seq_parameter_set_rbsp(Buffer *buffer)
         
     }
     sps->fps = fps;
-    
-    LOG("width %d, height %d, fps %d", sps->width, sps->height, sps->fps);
+
+    //LOG("width %d, height %d, fps %d", sps->width, sps->height, sps->fps);
 
     FREE(rbsp_buffer);
     return sps;

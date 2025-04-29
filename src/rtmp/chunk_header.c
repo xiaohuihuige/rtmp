@@ -96,7 +96,7 @@ static void _readMessageHeader(bs_t *b, HeaderChunk *header)
     }
 }
 
-static void _showChunkHeader(HeaderChunk *header)
+void _showChunkHeader(HeaderChunk *header)
 {
     LOG("fmt %d, csid %d, timestemp %d, header_len %d, length %d, type %d, stream %d", 
             header->fmt, header->csid, header->timestamp, header->header_len,
@@ -116,7 +116,7 @@ int readHeaderChunk(Buffer *buffer, HeaderChunk *header)
 
     FREE(b);
 
-    _showChunkHeader(header);
+    //_showChunkHeader(header);
 
     return header->header_len;
 }

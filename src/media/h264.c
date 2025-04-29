@@ -78,7 +78,7 @@ void *createH264Media(Buffer *buffer)
 
     media->frame_count = list_count_nodes(&media->frame_fifo->list);  
 
-    LOG("media create success %p, frame count %d", media, media->frame_count);
+    //LOG("media create success %p, frame count %d", media, media->frame_count);
     
     FREE(h264_info.sps);
     FREE(h264_info.pps);

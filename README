@@ -17,7 +17,7 @@ https://zhuanlan.zhihu.com/p/645648373
 sysctl net.ipv4.tcp_wmem
 
 #设置大小
-sudo sysctl -w net.ipv4.tcp_wmem="4096 87380 6291456"
+sudo sysctl -w net.ipv4.tcp_wmem="4096  87380  12582912"
 
 #生效
 sudo sysctl -p
