@@ -1,6 +1,6 @@
 #include <schedule/net-common.h>
 #include "rtmp_server.h"
-#include "media.h"
+#include "rtmp_media.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
@@ -77,10 +77,10 @@ int main()
     
     RtmpServer * rtmp = createRtmpServer(DEFAULT_IP, SERVER_PORT);
 
-    addRtmpServerStream(rtmp, createMediaChannl("app", 0, "./resources/test.h264"));
-    addRtmpServerStream(rtmp, createMediaChannl("live", 0, "./resources/test1.h264"));
-    addRtmpServerStream(rtmp, createMediaChannl("girl", 0, "./resources/girl.h264"));
-    addRtmpServerStream(rtmp, createMediaChannl("mountain", 0, "./resources/mountain.h264"));
+    addRtmpServerMedia(rtmp, createRtmpMedia("app", "./resources/test.h264", NULL));
+    addRtmpServerMedia(rtmp, createRtmpMedia("live", "./resources/test1.h264", NULL));
+    addRtmpServerMedia(rtmp, createRtmpMedia("girl", "./resources/girl.h264", NULL));
+    addRtmpServerMedia(rtmp, createRtmpMedia("mountain","./resources/mountain.h264", NULL));
 
     while (keep_running) sleep(1);
 

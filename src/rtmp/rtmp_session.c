@@ -32,15 +32,16 @@ RtmpSession *createRtmpSession(Seesion *conn)
     }
 
     session->media          = NULL;
-    session->index          = 0;
     session->conn           = conn;
     session->state          = RTMP_HANDSHAKE_UNINIT;
     session->packet         = NULL;
     session->stream_task    = NULL;
 
-    session->interval       = 40;
-    session->base_time      = 1000;
-    session->cache          = 0;
+    session->channle[0].base_time = 1000;
+    session->channle[1].base_time = 1000;
+    session->channle[0].index = 0;
+    session->channle[1].index = 0;
+
     LOG("create rtmp session success %p", session);
 
     return session;
@@ -49,109 +50,11 @@ RtmpSession *createRtmpSession(Seesion *conn)
 void destroyRtmpSession(RtmpSession *session)
 {
     LOG("destroy Rtmp Session %p", session);
-    stopPushStreamTask(session);
+    stopPushSessionstream(session);
     FREE(session->buffer);
     FREE(session->b);
     FREE(session->packet);
     FREE(session);
-}
-
-static void _sendStreamGopCache(RtmpSession *session)
-{
-    while (1) {
-        Buffer *frame = getMediaFrame(session->media, session->index);
-        if (!frame) {
-            session->index = 0;
-            break;
-        }
-
-        if (frame->frame_type == NAL_UNIT_TYPE_CODED_SLICE_IDR) {
-            if (session->cache == 1)
-                break;
-
-            sendFrameStream(session, getMediaInfo(session->media), session->base_time);
-            session->cache = 1;
-        }
-
-        sendFrameStream(session, frame, session->base_time);
-
-        session->base_time += session->interval;
-
-        session->index++;
-    }
-}
-
-static int _pushStreamLoop(void *args)
-{
-    if (!args)
-        return NET_FAIL;
-
-    RtmpSession *session = args;
-
-    Buffer *frame = getMediaFrame(session->media, session->index);
-    if (!frame) {
-        session->index = 0;
-        return NET_FAIL;
-    }
-
-    //LOG("%p, %p, index %d, type %d, length %d", session, frame, session->index, frame->frame_type, frame->length);
-
-    if (frame->frame_type == NAL_UNIT_TYPE_CODED_SLICE_IDR) 
-        sendFrameStream(session, getMediaInfo(session->media), session->base_time);
-        
-    int code = sendFrameStream(session, frame, session->base_time);
-    if (code != NET_SUCCESS) 
-        return stopPushStreamTask(session);
-    
-    session->base_time += session->interval;
-
-    session->index++;
-
-    return NET_SUCCESS;
-}
-
-int findMediaStreamChannl(RtmpSession *session)
-{
-    if (!session)
-        return NET_FAIL;
-
-    session->media = findRtmpServerStream((RtmpServer *)session->conn->tcps->parent, session->config.app);
-    if (!session->media) {
-        ERR("find rtmp stream error");
-        return NET_FAIL;
-    }
-
-    LOG("find stream %p, name %s", session->media, session->media->app);
-
-    return NET_SUCCESS;
-}
-
-int stopPushStreamTask(RtmpSession *session)
-{
-    if (!session->media)
-        return NET_FAIL;
-
-    if (session->stream_task)
-        deleteTimerTask(session->stream_task);
-    session->stream_task = NULL;
-
-    return NET_SUCCESS;
-}
-
-int startPushStreamTask(RtmpSession *session)
-{
-    if (!session->media)
-        return NET_FAIL;
-
-    _sendStreamGopCache(session);
-
-    sps_t *sps = getMediaConfig(session->media);
-
-    session->stream_task = addTimerTask(session->conn->tcps->scher, 0, sps->fps + 10, _pushStreamLoop, (void *)session);
-    if (!session->stream_task)
-        return NET_FAIL;
-
-    return NET_SUCCESS;
 }
 
 static int _parseFirstChunkPacket(RtmpPacket *packet, Buffer *buffer)

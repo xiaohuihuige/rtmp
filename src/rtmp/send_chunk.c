@@ -2,9 +2,9 @@
 
 #define CHUNK_SIZE 255
 
-Buffer *rtmpWriteFrame(Buffer *frame)
+Buffer *rtmpWriteFrame(uint8_t *data, int size, int type)
 {
-    int length = RTMP_FRAME_HEADER_LENGTH + frame->length;
+    int length = RTMP_FRAME_HEADER_LENGTH + size;
 
     Buffer *buffer = createBuffer(length);
     if (!buffer)
@@ -14,9 +14,9 @@ Buffer *rtmpWriteFrame(Buffer *frame)
     if (!b)
         return NULL;
 
-    buffer->frame_type = frame->frame_type;
+    buffer->frame_type = type;
 
-    if (NAL_UNIT_TYPE_CODED_SLICE_IDR == frame->frame_type)
+    if (NAL_UNIT_TYPE_CODED_SLICE_IDR == type)
         bs_write_u8(b, 0x17); //0x27
     else 
         bs_write_u8(b, 0x27); //0x27
@@ -26,9 +26,9 @@ Buffer *rtmpWriteFrame(Buffer *frame)
     bs_write_u8(b, 0x00);
     bs_write_u8(b, 0x00);
 
-    bs_write_u(b, 32, frame->length);
+    bs_write_u(b, 32, size);
 
-    bs_write_bytes(b, frame->data, frame->length);
+    bs_write_bytes(b, data, size);
 
     FREE(b);
 

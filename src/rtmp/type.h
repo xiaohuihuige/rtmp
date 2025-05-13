@@ -206,4 +206,35 @@ typedef struct
     uint8_t  receive_video;
 } TransmissionConfig;
 
+typedef struct 
+{
+	Buffer *avc_sequence;
+	FifoQueue *queue;
+	int fps;
+	int width;
+	int height;
+	int duration;
+	int profile_idc;
+	int level_idc;
+	int frame_count;
+} VideoMedia;
+
+typedef struct 
+{
+	int duration;
+} AudioMedia;
+
+typedef struct 
+{
+    char app[64];
+    VideoMedia *video;
+    AudioMedia *audio;
+} RtmpMedia;
+
+typedef struct 
+{
+   int base_time;
+   int index;
+} MediaChannle;
+
 #endif

@@ -1,5 +1,6 @@
 #include "rtmp_reply.h"
 #include "control_message.h"
+#include "rtmp_media.h"
 
 int rtmpSendConnect(RtmpSession *session, HeaderChunk *header, int code, double transactionId)
 {
@@ -15,7 +16,7 @@ int rtmpSendConnect(RtmpSession *session, HeaderChunk *header, int code, double 
 
     sendConnectResult(session, buffer, transactionId);
 
-    findMediaStreamChannl(session);
+    findRtmpMedia(session);
 
     FREE(buffer);
 
@@ -51,7 +52,7 @@ int rtmpSendOnplay(RtmpSession *session, HeaderChunk *header, int code, double t
 
     FREE(buffer);
 
-    startPushStreamTask(session);
+    startPushSessionStream(session);
 
     return NET_SUCCESS; 
 }

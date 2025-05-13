@@ -33,7 +33,7 @@ static void _closeMeidaStream(RtmpServer *rtmp)
     list_for_each_entry_safe(task_node, temp_node, &rtmp->stream->list, list)
     {
         if (task_node->task)
-            destroyMediaChannl((Media *)task_node->task);
+            destroyRtmpMedia((RtmpMedia *)task_node->task);
         task_node->task = NULL;
 
         deleteFifoQueueTask(task_node, Seesion);
@@ -83,7 +83,7 @@ void destroyRtmpServer(RtmpServer *rtmp)
     FREE(rtmp);
 }
 
-void addRtmpServerStream(RtmpServer *rtmp, Media *media)
+void addRtmpServerMedia(RtmpServer *rtmp, RtmpMedia *media)
 {
     if (!rtmp || !media)
         return;
@@ -93,7 +93,7 @@ void addRtmpServerStream(RtmpServer *rtmp, Media *media)
     enqueue(rtmp->stream, media); 
 }
 
-Media *findRtmpServerStream(RtmpServer *rtmp, const char *app)
+RtmpMedia *findRtmpServerMedia(RtmpServer *rtmp, const char *app)
 {
     if (!rtmp || !app)
         return NULL;
@@ -101,7 +101,7 @@ Media *findRtmpServerStream(RtmpServer *rtmp, const char *app)
     FifoQueue *task_node = NULL;
     FifoQueue *temp_node = NULL;
     list_for_each_entry_safe(task_node, temp_node, &rtmp->stream->list, list) {
-        Media *media = (Media *)task_node->task;
+        RtmpMedia *media = (RtmpMedia *)task_node->task;
         if (!strncmp(media->app, app, strlen(app)) ) 
             return media;
     }

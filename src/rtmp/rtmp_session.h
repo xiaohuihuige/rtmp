@@ -5,14 +5,9 @@
 #include <schedule/tcp_server.h>
 #include <schedule/timestamp.h>
 #include "type.h"
-#include "media.h"
 
 typedef struct 
 {
-   int cache;
-   int index;
-   int interval;
-   int base_time;
    int state;
    Seesion *conn;
    RtmpPacket *packet;
@@ -20,15 +15,12 @@ typedef struct
    TaskTimer *stream_task;
    Buffer *buffer;
    bs_t *b;
-   Media *media;
+   RtmpMedia *media;
+   MediaChannle channle[2];
 } RtmpSession;
 
 RtmpSession *createRtmpSession(Seesion *conn);
 void destroyRtmpSession(RtmpSession *session);
 void recvRtmpSession(RtmpSession *session, Buffer *buffer);
-
-int startPushStreamTask(RtmpSession *session);
-int findMediaStreamChannl(RtmpSession *session);
-int stopPushStreamTask(RtmpSession *session);
 
 #endif
