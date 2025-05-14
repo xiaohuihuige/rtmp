@@ -51,6 +51,7 @@ typedef struct
 #define AMF_OBJECT_END_LENGTH 3
 #define AMF_NAMESTRING_LENGTH(a, b) (5 + (strlen(a)) + (strlen(b)))
 #define AMF_NAMEDOUBLE_LENGTH(a) (11 + (strlen(a)))
+#define AMF_NAMEBOOLEAN_LENGTH(a) (4 + (strlen(a)))
 #define AMF_NULL_LENGTH 1
 #define AMG_BOOLEAN_LENGTH 2
 

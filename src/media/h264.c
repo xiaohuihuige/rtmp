@@ -27,7 +27,7 @@ static void _paserNaluPacket(FifoQueue *frame_queue, uint8_t *data, int size, in
         return;
     }
 
-    enqueue(frame_queue, rtmpWriteFrame(data, size, type));
+    enqueue(frame_queue, rtmpWriteVideoFrame(data, size, type));
 }
 
 static int _runMediaStream(FifoQueue *frame_queue, Buffer *buffer, H264Info *info)
@@ -94,7 +94,6 @@ VideoMedia *createH264Media(Buffer *buffer)
     if (!media)
         return NULL;
 
-
     H264Info info = {0};
 
     media->queue = createFifiQueue();
@@ -113,7 +112,9 @@ VideoMedia *createH264Media(Buffer *buffer)
     media->duration = (int)1000/media->fps; 
     media->level_idc = sps->level_idc;
     media->profile_idc = sps->profile_idc;
-    
+    media->videodatarate = VIDEODATARATE;
+    media->videocodecid  = VIDEOCODECID;
+
     media->avc_sequence = rtmpAvcSequence(info.sps_buffer, info.pps_buffer);
     if (!media->avc_sequence) 
         return NULL;

@@ -38,7 +38,9 @@ int sendScriptStream(RtmpSession *session, Buffer *frame, uint32_t timestamp);
 
 int sendRtmpPacket(RtmpSession *session, HeaderChunk *header, Buffer *frame);
 
-Buffer *rtmpWriteFrame(uint8_t *data, int size, int type);
+Buffer *rtmpWriteVideoFrame(uint8_t *data, int size, int type);
 Buffer *rtmpAvcSequence(Buffer *sps_frame, Buffer *pps_frame);
+Buffer *rtmpWriteAudioFrame(Buffer *frame, int samplingFreqIndex);
+Buffer *rtmpadtsSequence(int profile, int samplingFreqIndex, int channelCfg);
 
 #endif

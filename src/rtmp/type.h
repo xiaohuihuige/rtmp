@@ -218,12 +218,22 @@ typedef struct
 	int level_idc;
 	int frame_count;
 	int gop_size;
+	int videodatarate;
+	int videocodecid;
 } VideoMedia;
 
 typedef struct 
 {
+	Buffer *adts_sequence;
+	FifoQueue *queue;
 	int gop_size;
 	int duration;
+	int frame_count;
+	int stereo;
+	int audiocodecid;
+	int audiodatarate;
+	int audiosamplerate;
+	int audiosamplesize;
 } AudioMedia;
 
 typedef struct 

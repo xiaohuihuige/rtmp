@@ -1,6 +1,7 @@
 #include "rtmp_media.h"
 #include "send_chunk.h"
 #include "rtmp_server.h"
+#include "aac.h"
 
 static Buffer *_readMediaFile(const char *file_path)
 {
@@ -35,10 +36,11 @@ RtmpMedia *createRtmpMedia(const char *app, const char *h264_file, const char *a
 
     Buffer *h264_buffer = _readMediaFile(h264_file);
 
-    //Buffer *acc_buffer  = _readMediaFile(aac_file);
+    Buffer *acc_buffer  = _readMediaFile(aac_file);
 
     media->video = createH264Media(h264_buffer);
-    media->audio = NULL;
+
+    media->audio = createAacMedia(acc_buffer);
 
     return media;
 }
@@ -46,6 +48,7 @@ RtmpMedia *createRtmpMedia(const char *app, const char *h264_file, const char *a
 void destroyRtmpMedia(RtmpMedia *media)
 {
     destroyH264Media(media->video);
+    destroyAacMedia(media->audio);
     FREE(media);
 }
 
@@ -72,16 +75,26 @@ static int sendVideoFrameToclient(RtmpSession *session)
 
 static int sendAudioFrameToclient(RtmpSession *session)
 {
-    // session->channle[1].base_time += session->media->audio->duration;
+    Buffer *frame = getAacMediaFrame(session->media->audio, session->channle[1].index);
+    if (!frame)
+    {
+        session->channle[1].index = 0;
+        return NET_SUCCESS;
+    }
 
-    // session->channle[1].index++;
+    if (NET_SUCCESS != sendAudioStream(session, frame, session->channle[1].base_time))
+        return NET_FAIL;
+
+    session->channle[1].base_time += session->media->audio->duration;
+
+    session->channle[1].index++;
 
     return NET_SUCCESS;
 }
 
 static void _sendStreamGopCache(RtmpSession *session)
 {
-    sendAudioFrameToclient(session);
+    //sendAudioStream(session, session->media->audio->adts_sequence, session->channle[1].base_time);
 
     int length = session->media->video->gop_size;
     if (length <= 0)
