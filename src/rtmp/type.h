@@ -217,10 +217,12 @@ typedef struct
 	int profile_idc;
 	int level_idc;
 	int frame_count;
+	int gop_size;
 } VideoMedia;
 
 typedef struct 
 {
+	int gop_size;
 	int duration;
 } AudioMedia;
 

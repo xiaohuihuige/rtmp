@@ -35,8 +35,9 @@ RtmpSession *createRtmpSession(Seesion *conn)
     session->conn           = conn;
     session->state          = RTMP_HANDSHAKE_UNINIT;
     session->packet         = NULL;
-    session->stream_task    = NULL;
-
+    session->video_task     = NULL;
+    session->audio_task     = NULL;
+    
     session->channle[0].base_time = 1000;
     session->channle[1].base_time = 1000;
     session->channle[0].index = 0;

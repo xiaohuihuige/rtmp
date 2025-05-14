@@ -38,6 +38,7 @@ RtmpMedia *createRtmpMedia(const char *app, const char *h264_file, const char *a
     //Buffer *acc_buffer  = _readMediaFile(aac_file);
 
     media->video = createH264Media(h264_buffer);
+    media->audio = NULL;
 
     return media;
 }
@@ -48,7 +49,7 @@ void destroyRtmpMedia(RtmpMedia *media)
     FREE(media);
 }
 
-static int sendFrameToclient(RtmpSession *session)
+static int sendVideoFrameToclient(RtmpSession *session)
 {
     Buffer *frame = getH264MediaFrame(session->media->video, session->channle[0].index);
     if (!frame) {
@@ -69,20 +70,42 @@ static int sendFrameToclient(RtmpSession *session)
     return frame->frame_type;
 }
 
-static void _sendStreamGopCache(RtmpSession *session)
+static int sendAudioFrameToclient(RtmpSession *session)
 {
-    while (1) {
-        sendFrameToclient(session);
-    }
+    // session->channle[1].base_time += session->media->audio->duration;
+
+    // session->channle[1].index++;
+
+    return NET_SUCCESS;
 }
 
-static int _pushStreamLoop(void *args)
+static void _sendStreamGopCache(RtmpSession *session)
+{
+    sendAudioFrameToclient(session);
+
+    int length = session->media->video->gop_size;
+    if (length <= 0)
+        return;
+
+    while (length--) sendVideoFrameToclient(session);
+}
+
+static int _pushVideoStreamLoop(void *args)
 {
     if (!args)
         return NET_FAIL;
 
-    if (NET_SUCCESS != sendFrameToclient((RtmpSession *)args))
-        stopPushSessionstream((RtmpSession *)args);
+    sendVideoFrameToclient((RtmpSession *)args);
+
+    return NET_SUCCESS;
+}
+
+static int _pushAudioStreamLoop(void *args)
+{
+    if (!args)
+        return NET_FAIL;
+
+    sendAudioFrameToclient((RtmpSession *)args);
 
     return NET_SUCCESS;
 }
@@ -94,12 +117,23 @@ int startPushSessionStream(RtmpSession *session)
 
     _sendStreamGopCache(session);
 
-    session->stream_task = addTimerTask(session->conn->tcps->scher, 0, 
-                                        session->media->video->fps, 
-                                        _pushStreamLoop, (void *)session);
-    if (!session->stream_task)
-        return NET_FAIL;
+    if (session->media->video) {
+        session->video_task = addTimerTask(session->conn->tcps->scher, 
+                                            session->media->video->duration, 
+                                            session->media->video->duration, 
+                                            _pushVideoStreamLoop, (void *)session);
+        if (!session->video_task)
+            return NET_FAIL;
+    }
 
+    if (session->media->audio) {
+        session->audio_task = addTimerTask(session->conn->tcps->scher, 
+                                            session->media->audio->duration, 
+                                            session->media->audio->duration, 
+                                            _pushAudioStreamLoop, (void *)session);
+        if (!session->audio_task)
+            return NET_FAIL;
+    }
     return NET_SUCCESS;
 }
 
@@ -124,8 +158,12 @@ void stopPushSessionstream(RtmpSession *session)
     if (!session->media)
         return;
 
-    if (session->stream_task)
-        deleteTimerTask(session->stream_task);
+    if (session->video_task)
+        deleteTimerTask(session->video_task);
 
-    session->stream_task = NULL;
+    if (session->audio_task)
+        deleteTimerTask(session->audio_task);
+
+    session->video_task = NULL;
+    session->audio_task = NULL;
 }

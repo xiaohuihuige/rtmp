@@ -23,6 +23,8 @@ static void _paserNaluPacket(FifoQueue *frame_queue, uint8_t *data, int size, in
         FREE(info->pps_buffer);
         info->pps_buffer = createFrameBuffer(data, size, type, 0);
         return;
+    } else if (type == NAL_UNIT_TYPE_SEI) {
+        return;
     }
 
     enqueue(frame_queue, rtmpWriteFrame(data, size, type));
@@ -41,7 +43,9 @@ static int _runMediaStream(FifoQueue *frame_queue, Buffer *buffer, H264Info *inf
 
     uint8_t *nalu_start = buffer->data + buffer->index + nal_start;
 
-    _paserNaluPacket(frame_queue, nalu_start, nal_end - nal_start, (*nalu_start) & 0x1F, info);
+    int frame_type = (*nalu_start) & 0x1F;
+
+    _paserNaluPacket(frame_queue, nalu_start, nal_end - nal_start, frame_type, info);
 
     buffer->index += nal_end - nal_start;
 
@@ -65,6 +69,23 @@ Buffer *getH264MediaFrame(VideoMedia *media, int index)
     }
     
     return NULL; // 如果索引超出范围，返回 NULL
+}
+
+int _getGoplength(VideoMedia *media)
+{
+    int index = 0;
+    while (1){
+        Buffer *frame = getH264MediaFrame(media, index);
+        if (!frame) 
+            break;
+   
+        if (frame->frame_type == NAL_UNIT_TYPE_CODED_SLICE_IDR && index != 0) 
+            break;
+
+        index++;
+    }
+
+    return index;
 }
 
 VideoMedia *createH264Media(Buffer *buffer)
@@ -92,12 +113,13 @@ VideoMedia *createH264Media(Buffer *buffer)
     media->duration = (int)1000/media->fps; 
     media->level_idc = sps->level_idc;
     media->profile_idc = sps->profile_idc;
-
+    
     media->avc_sequence = rtmpAvcSequence(info.sps_buffer, info.pps_buffer);
     if (!media->avc_sequence) 
         return NULL;
 
     media->frame_count = list_count_nodes(&media->queue->list);  
+    media->gop_size = _getGoplength(media);
 
     FREE(info.sps_buffer);
     FREE(info.pps_buffer);

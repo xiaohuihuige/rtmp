@@ -1,7 +1,5 @@
 #include "send_chunk.h"
 
-#define CHUNK_SIZE 255
-
 Buffer *rtmpWriteFrame(uint8_t *data, int size, int type)
 {
     int length = RTMP_FRAME_HEADER_LENGTH + size;
@@ -72,14 +70,11 @@ Buffer *rtmpAvcSequence(Buffer *sps_frame, Buffer *pps_frame)
     bs_write_u(b, 16, pps_frame->length);
     bs_write_bytes(b, pps_frame->data, pps_frame->length);
 
-    //LOG("pos %d, %d", length, bs_pos(b));
-
-    //printfChar(buffer->data, length);
-
     FREE(b);
     
     return buffer;
 }
+
 
 int sendFrameStream(RtmpSession *session, Buffer *frame, uint32_t timestamp)
 {
