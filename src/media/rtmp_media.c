@@ -109,16 +109,18 @@ static void _sendStreamGopCache(RtmpSession *session)
     if (session->media->video->queue && session->media->audio->queue)
     {   
         int video_length = session->media->video->gop_size;
-        int audio_length = (int)session->media->video->gop_time / session->media->audio->duration;
+        int audio_length = (int)session->media->video->gop_time / (session->media->audio->duration * 2);
         sendAudioAdtsStream(session, session->media->audio->adts_sequence, session->channle[AUDIO_CHANNL].base_time);
+        LOG("video_length %d, audio_length  %d", video_length, audio_length);
         while (video_length > 0 || audio_length > 0) {
-            if (video_length > 0) {
-                video_length--;
-                sendVideoFrameToclient(session);
-            }
             if (audio_length > 0) {
                 audio_length--;
                 sendAudioFrameToclient(session);
+                sendAudioFrameToclient(session);
+            }
+            if (video_length > 0) {
+                video_length--;
+                sendVideoFrameToclient(session);
             }
         }
     } else if (!session->media->video->queue && session->media->audio->queue) {
