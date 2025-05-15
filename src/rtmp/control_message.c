@@ -556,6 +556,9 @@ int sendSampleAccess(RtmpSession *session, Buffer *buffer,  uint32_t stream_id)
 
 int sendOnMetaData(RtmpSession *session, Buffer *buffer)
 {
+    if (!session->media)
+        return NET_FAIL;
+        
     bs_t *b = bs_new(buffer->data, buffer->length);
     if (!b) 
         return NET_FAIL;
