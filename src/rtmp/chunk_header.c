@@ -31,7 +31,6 @@ static int _wirteChunkHeader(bs_t *b, HeaderChunk *header)
         bs_write_u(b, 24, header->timestamp >= 0xFFFFFF ? 0xFFFFFF : header->timestamp);
         bs_write_u(b, 24, header->length);
         bs_write_u(b, 8, header->type_id);
-        bs_write_u(b, 32, header->stream_id);
     }
     else if (header->fmt == RTMP_CHUNK_TYPE_2)
     {

@@ -1,6 +1,37 @@
 #include "send_chunk.h"
 
-Buffer *rtmpWriteAudioFrame(Buffer *frame, int samplingFreqIndex)
+static int _sendRtmpPacket(RtmpSession *session, HeaderChunk *header, Buffer *frame)
+{
+    if (!session || !header || !frame || header->length <= 0)
+    {
+        ERR("args error");
+        return NET_FAIL;
+    }
+ 
+    int index = frame->index;
+
+    while (frame->length > index) {
+        bs_init(session->b, session->buffer->data, session->buffer->length);
+
+        writeChunkHeader(session->b, header);
+
+        int chunk_size = frame->length - index < RTMP_OUTPUT_CHUNK_SIZE ? frame->length - index : RTMP_OUTPUT_CHUNK_SIZE;
+        
+        bs_write_bytes(session->b, frame->data + index, chunk_size);
+
+        int code = sendToClient(session, session->buffer->data, bs_pos(session->b));
+        if (code <= 0)
+            return NET_FAIL;
+
+        index += chunk_size;
+
+        header->fmt  = RTMP_CHUNK_TYPE_3;
+    }
+
+    return NET_SUCCESS;
+}
+
+Buffer *rtmpWriteAudioFrame(Buffer *frame, int sample_rate_index, int sample_size, int channel)
 {
     Buffer *buffer = createBuffer(frame->length + 2);
     if (!buffer)
@@ -10,12 +41,10 @@ Buffer *rtmpWriteAudioFrame(Buffer *frame, int samplingFreqIndex)
     if (!b)
         return NULL;
 
-    bs_write_u(b, 8, 0xAF);
-
-    // bs_write_u(b, 4, 0x0A);
-    // bs_write_u(b, 2, samplingFreqIndex - 1);
-    // bs_write_u(b, 1, 0x01);
-    // bs_write_u(b, 1, 0x01);
+    bs_write_u(b, 4, 0x0A);
+    bs_write_u(b, 2, sample_rate_index - 1);
+    bs_write_u(b, 1, sample_size);
+    bs_write_u(b, 1, channel);
 
     bs_write_u8(b, 0x01);
 
@@ -37,26 +66,31 @@ Buffer *rtmpWriteAudioFrame(Buffer *frame, int samplingFreqIndex)
 // https://www.cnblogs.com/8335IT/p/18208384
 
 // 4bit soundFormat 1010(10)  0xA         AAC
-// 2bit soundRate   11        44100Hz
-// 1bit soundSize   1         16bit
-// 1bit soundType   1         sndstero    0xf
+// 2bit(3) soundRate   11        44100Hz
+// 1bit(1) soundSize   1         16bit
+// 1bit(1) soundType   1         sndstero    0xf
 
 // 8bit AACPaketType     0        AAC sequence header
-// 5bit audioOjbectType  00010    AAC LC
-// 4bit SampleRateIndex  0100     44100Hz
-// 4bit ChannelConfig    0010     stero
-// 1bit FrameLengthFlag   0       每个帧率有1024个采样
-// 1bit DependOnCoreCoder 0
-// 1bit extenslonFlag     0
+//5 bits(2):audio oject type      AAC LC
+//4 bits(4):sample frequency index  44100Hz
+//4 bits(2):channel configuration    stero
+//1 bits(0):FrameLengthFlag          每个帧率有1024个采样
+//1 bits(0):DependOnCoreCoder
+//1 bits(0):extenslonFlag
 
-// 0x210
-// packet.body[0] = 0xAF; // 固定头
-// packet.body[1] = 0x01; // 数据类型
-// memcpy(packet.body + 2, aac_data, data_len);
-// https://zhuanlan.zhihu.com/p/666954710
-Buffer *rtmpadtsSequence(int profile, int samplingFreqIndex, int channelCfg)
+//11 bits(0x2b7) sync extension type
+//5 bits(5) audio oject type
+//1 bits(0) sbr present flag
+
+Buffer *rtmpadtsSequence(int profile, int sample_rate_index, int sample_size, int channel)
 {
-    Buffer *buffer = createBuffer(4);
+
+    // sample_rate_index 4, 
+    // channel 1, 
+    // protectionAbsent 1, 
+    // profile 1,
+
+    Buffer *buffer = createBuffer(20);
     if (!buffer)
         return NULL;
 
@@ -64,21 +98,26 @@ Buffer *rtmpadtsSequence(int profile, int samplingFreqIndex, int channelCfg)
     if (!b)
         return NULL;
 
-    bs_write_u(b, 8, 0xAF);
-    // bs_write_u(b, 4, 0x0A);
-    // bs_write_u(b, 2, samplingFreqIndex - 1);
-    // bs_write_u(b, 1, 0x01);
-    // bs_write_u(b, 1, 0x01);
+    bs_write_u(b, 4, 0x0A);
+    bs_write_u(b, 2, sample_rate_index - 1);
+    bs_write_u(b, 1, sample_size);
+    bs_write_u(b, 1, channel);
 
+    bs_write_u8(b, 0x00); //2
+
+    bs_write_u(b, 5, profile + 1); 
+    bs_write_u(b, 4, sample_rate_index); 
+    bs_write_u(b, 4, channel + 1); 
+
+    bs_write_u(b, 1, 0x00);
+    bs_write_u(b, 1, 0x00);
+    bs_write_u(b, 1, 0x00); //5 + 5 + 11 + 5
+
+    bs_write_u(b, 11, 0x2b7);
+    bs_write_u(b, 5, 0x05);
     bs_write_u8(b, 0x00);
 
-    bs_write_u(b, 5, profile + 1);
-    bs_write_u(b, 4, samplingFreqIndex);
-    bs_write_u(b, 4, channelCfg);
-
-    bs_write_u(b, 1, 0x00);
-    bs_write_u(b, 1, 0x00);
-    bs_write_u(b, 1, 0x00);
+    buffer->length = bs_pos(b);
 
     FREE(b);
 
@@ -172,66 +211,34 @@ int sendFrameStream(RtmpSession *session, Buffer *frame, uint32_t timestamp)
         .stream_id = 0,
     };
 
-    return sendRtmpPacket(session, &header, frame);
+    return _sendRtmpPacket(session, &header, frame);
 }
 
-int sendAudioStream(RtmpSession *session, Buffer *frame, uint32_t timestamp)
+int sendAudioStream(RtmpSession *session, Buffer *frame, uint32_t delta)
 {
     HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_1,
-        .csid = RTMP_CHANNEL_AUDIO,
-        .timestamp = timestamp,
+        .csid = RTMP_CHANNEL_DATA,
+        .timestamp = delta,
+        .length = frame->length,
+        .type_id = RTMP_TYPE_AUDIO,
+    };
+
+    return _sendRtmpPacket(session, &header, frame);
+}
+
+int sendAudioAdtsStream(RtmpSession *session, Buffer *frame, uint32_t base_time)
+{
+    HeaderChunk header = {
+        .fmt = RTMP_CHUNK_TYPE_0,
+        .csid = RTMP_CHANNEL_DATA,
+        .timestamp = base_time,
         .length = frame->length,
         .type_id = RTMP_TYPE_AUDIO,
         .stream_id = 0,
     };
 
-    return sendRtmpPacket(session, &header, frame);
-}
-
-int sendScriptStream(RtmpSession *session, Buffer *frame, uint32_t timestamp)
-{
-    HeaderChunk header = {
-        .fmt = RTMP_CHUNK_TYPE_1,
-        .csid = RTMP_CHANNEL_INVOKE,
-        .timestamp = timestamp,
-        .length = frame->length,
-        .type_id = RTMP_TYPE_DATA,
-        .stream_id = 0,
-    };
-
-    return sendRtmpPacket(session, &header, frame);
-}
-
-int sendRtmpPacket(RtmpSession *session, HeaderChunk *header, Buffer *frame)
-{
-    if (!session || !header || !frame || header->length <= 0)
-    {
-        ERR("args error");
-        return NET_FAIL;
-    }
- 
-    int index = frame->index;
-
-    while (frame->length > index) {
-        bs_init(session->b, session->buffer->data, session->buffer->length);
-
-        writeChunkHeader(session->b, header);
-
-        int chunk_size = frame->length - index < RTMP_OUTPUT_CHUNK_SIZE ? frame->length - index : RTMP_OUTPUT_CHUNK_SIZE;
-        
-        bs_write_bytes(session->b, frame->data + index, chunk_size);
-
-        int code = sendToClient(session, session->buffer->data, bs_pos(session->b));
-        if (code <= 0)
-            return NET_FAIL;
-
-        index += chunk_size;
-
-        header->fmt  = RTMP_CHUNK_TYPE_3;
-    }
-
-    return NET_SUCCESS;
+    return _sendRtmpPacket(session, &header, frame);
 }
 
 

@@ -71,21 +71,24 @@ Buffer *getH264MediaFrame(VideoMedia *media, int index)
     return NULL; // 如果索引超出范围，返回 NULL
 }
 
-int _getGoplength(VideoMedia *media)
+void _getGoplength(VideoMedia *media)
 {
-    int index = 0;
+    media->gop_size  = 0;
     while (1){
-        Buffer *frame = getH264MediaFrame(media, index);
+        Buffer *frame = getH264MediaFrame(media, media->gop_size);
         if (!frame) 
             break;
    
-        if (frame->frame_type == NAL_UNIT_TYPE_CODED_SLICE_IDR && index != 0) 
+        if (frame->frame_type == NAL_UNIT_TYPE_CODED_SLICE_IDR && media->gop_size != 0) 
             break;
 
-        index++;
+        media->gop_size++;
     }
 
-    return index;
+    if (media->gop_size != 0)
+        media->gop_time = (int) (media->gop_size * 1000) / media->fps;
+
+    return;
 }
 
 VideoMedia *createH264Media(Buffer *buffer)
@@ -93,6 +96,9 @@ VideoMedia *createH264Media(Buffer *buffer)
     VideoMedia *media = CALLOC(1, VideoMedia); 
     if (!media)
         return NULL;
+
+    if (!buffer)
+        return media;
 
     H264Info info = {0};
 
@@ -120,7 +126,8 @@ VideoMedia *createH264Media(Buffer *buffer)
         return NULL;
 
     media->frame_count = list_count_nodes(&media->queue->list);  
-    media->gop_size = _getGoplength(media);
+
+    _getGoplength(media);
 
     FREE(info.sps_buffer);
     FREE(info.pps_buffer);
@@ -131,7 +138,9 @@ VideoMedia *createH264Media(Buffer *buffer)
 
 void destroyH264Media(VideoMedia *media)
 {
-    destroyFifoQueue(media->queue, Buffer);
+    if (media->queue)
+        destroyFifoQueue(media->queue, Buffer);
+        
     FREE(media->avc_sequence);
     FREE(media);
 }

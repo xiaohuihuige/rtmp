@@ -2,6 +2,8 @@
 #include "rtmp_media.h"
 #include "send_chunk.h"
 
+static int gSampleRateIndex[] = {96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350};
+
 static int paresADTSHeader(AdtsHeader *header, uint8_t *data, int size)
 {
     bs_t *b = bs_new(data, size);
@@ -26,9 +28,9 @@ static int paresADTSHeader(AdtsHeader *header, uint8_t *data, int size)
 
     header->numberOfRawDataBlockInFrame = bs_read_u(b, 2);
     header->channelCfg = bs_read_u(b, 3);
-    LOG("samplingFreqIndex %d, length %d, %d, number %d, channle %d, protectionAbsent %d, profile %d, adtsBufferFullness %d",
-        header->samplingFreqIndex, header->aacFrameLength,
-        bs_pos(b), header->numberOfRawDataBlockInFrame, header->channelCfg, header->protectionAbsent, header->profile, header->adtsBufferFullness);
+    // LOG("samplingFreqIndex %d, length %d, %d, number %d, channle %d, protectionAbsent %d, profile %d, adtsBufferFullness %d, privateBit %d",
+    //     header->samplingFreqIndex, header->aacFrameLength,
+    //     bs_pos(b), header->numberOfRawDataBlockInFrame, header->channelCfg, header->protectionAbsent, header->profile, header->adtsBufferFullness, header->privateBit);
     return bs_pos(b);
 }
 
@@ -52,7 +54,7 @@ static int _runMediaStream(FifoQueue *frame_queue, Buffer *buffer, AdtsHeader *h
 
         memcpy(frame->data, buffer->data + buffer->index + len, frame->length);
 
-        enqueue(frame_queue, rtmpWriteAudioFrame(frame, header->samplingFreqIndex));
+        enqueue(frame_queue, rtmpWriteAudioFrame(frame, header->samplingFreqIndex, 1, header->channelCfg));
 
         buffer->index += header->aacFrameLength;
 
@@ -68,6 +70,10 @@ AudioMedia *createAacMedia(Buffer *buffer)
     if (!media)
         return NULL;
 
+    if (!buffer)
+        return media;
+
+
     media->queue = createFifiQueue();
     if (!media->queue)
         return NULL;
@@ -76,28 +82,25 @@ AudioMedia *createAacMedia(Buffer *buffer)
 
     while (_runMediaStream(media->queue, buffer, &header));
 
-    media->adts_sequence = rtmpadtsSequence(header.profile, header.samplingFreqIndex, header.channelCfg);
+    media->adts_sequence = rtmpadtsSequence(header.profile, header.samplingFreqIndex, 1, header.channelCfg);
     if (!media->adts_sequence)
         return NULL;
 
     media->frame_count = list_count_nodes(&media->queue->list);
 
-    //media->gop_size = _getGoplength(media);
-
-    media->duration = 20;
-
     media->stereo = header.channelCfg;
     media->audiocodecid = AUDIOCODECID;
     media->audiodatarate = AUDIODATARATE;
-    media->audiosamplerate = 44100;
+    media->audiosamplerate = gSampleRateIndex[header.samplingFreqIndex];
     media->audiosamplesize = 16;
-
+    media->duration = (int) (1024 * 1000)/media->audiosamplerate;
     return media;
 }
 
 void destroyAacMedia(AudioMedia *media)
 {
-    destroyFifoQueue(media->queue, Buffer);
+    if (media->queue)
+        destroyFifoQueue(media->queue, Buffer);
     FREE(media->adts_sequence);
     FREE(media);
 }

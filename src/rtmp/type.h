@@ -32,10 +32,13 @@
 #define FPS 30
 #define VIDEODATARATE 0
 #define VIDEOCODECID 7
-#define AUDIODATARATE 0
-#define AUDIOCODECID 0
+#define AUDIODATARATE 125
+#define AUDIOCODECID 10
 #define PROFILE 0
 #define LEVEL 0
+
+#define AUDIO_CHANNL 1
+#define VIDEO_CHANNL 0
 
 enum {
     NAL_UNIT_TYPE_UNSPECIFIED = 0,                    // Unspecified
@@ -213,11 +216,14 @@ typedef struct
 	int fps;
 	int width;
 	int height;
+	int display_width;
+	int display_height;
 	int duration;
 	int profile_idc;
 	int level_idc;
 	int frame_count;
 	int gop_size;
+	int gop_time;
 	int videodatarate;
 	int videocodecid;
 } VideoMedia;
@@ -226,7 +232,6 @@ typedef struct
 {
 	Buffer *adts_sequence;
 	FifoQueue *queue;
-	int gop_size;
 	int duration;
 	int frame_count;
 	int stereo;

@@ -38,10 +38,10 @@ RtmpSession *createRtmpSession(Seesion *conn)
     session->video_task     = NULL;
     session->audio_task     = NULL;
     
-    session->channle[0].base_time = 1000;
-    session->channle[1].base_time = 1000;
-    session->channle[0].index = 0;
-    session->channle[1].index = 0;
+    session->channle[VIDEO_CHANNL].base_time = 1000;
+    session->channle[AUDIO_CHANNL].base_time = 1000;
+    session->channle[VIDEO_CHANNL].index = 0;
+    session->channle[AUDIO_CHANNL].index = 0;
 
     LOG("create rtmp session success %p", session);
 
@@ -52,6 +52,7 @@ void destroyRtmpSession(RtmpSession *session)
 {
     LOG("destroy Rtmp Session %p", session);
     stopPushSessionstream(session);
+    session->media = NULL;
     FREE(session->buffer);
     FREE(session->b);
     FREE(session->packet);

@@ -368,9 +368,6 @@ static void _buildOnMetaData(bs_t *b, VideoMedia *video, AudioMedia *audio)
                 + AMF_NAMEDOUBLE_LENGTH("audiocodecid")
                 + AMF_NAMESTRING_LENGTH("profile", "") 
                 + AMF_NAMESTRING_LENGTH("level", "") 
-                + AMF_NAMEDOUBLE_LENGTH("audiosamplerate")
-                + AMF_NAMEDOUBLE_LENGTH("audiosamplesize")
-                + AMF_NAMEBOOLEAN_LENGTH("stereo")
                 + AMF_OBJECT_END_LENGTH;
 
     HeaderChunk header = {
@@ -387,23 +384,18 @@ static void _buildOnMetaData(bs_t *b, VideoMedia *video, AudioMedia *audio)
     amf_write_string(b, "onMetaData", strlen("onMetaData"));
 
 	amf_write_object(b);
-	amf_write_NamedString(b, "Server", strlen("Server"), "nginx-rtmp-module", strlen("nginx-rtmp-module"));
+	amf_write_NamedString(b,  "Server", strlen("Server"), "nginx-rtmp-module", strlen("nginx-rtmp-module"));
 	amf_write_NamedDouble(b,  "width",   strlen("width"),  video->width);
 	amf_write_NamedDouble(b,  "height",  strlen("height"),  video->height);
-	amf_write_NamedDouble(b,  "displayWidth",   strlen("displayWidth"),  video->width);
-	amf_write_NamedDouble(b,  "displayHeight",   strlen("displayHeight"),  video->height);
+	amf_write_NamedDouble(b,  "displayWidth",   strlen("displayWidth"),  video->display_width);
+	amf_write_NamedDouble(b,  "displayHeight",   strlen("displayHeight"),  video->display_height);
 	amf_write_NamedDouble(b,  "duration",   strlen("duration"),  DURATION);
 	amf_write_NamedDouble(b,  "framerate",   strlen("framerate"),  video->fps);
 	amf_write_NamedDouble(b,  "fps",         strlen("fps"),  video->fps);
-	amf_write_NamedDouble(b,  "videodatarate",   strlen("videodatarate"),  VIDEODATARATE);
-	amf_write_NamedDouble(b,  "videocodecid",   strlen("videocodecid"),  VIDEOCODECID);
+	amf_write_NamedDouble(b,  "videodatarate",   strlen("videodatarate"),  video->videodatarate);
+	amf_write_NamedDouble(b,  "videocodecid",   strlen("videocodecid"),    video->videocodecid);
 	amf_write_NamedDouble(b,  "audiodatarate",   strlen("audiodatarate"),  audio->audiodatarate);
-	amf_write_NamedDouble(b,  "audiocodecid",   strlen("audiocodecid"),  audio->audiocodecid);
-
-    amf_write_NamedDouble(b, "audiosamplerate", strlen("audiosamplerate"), audio->audiosamplerate);
-    amf_write_NamedDouble(b, "audiosamplesize", strlen("audiosamplesize"), audio->audiosamplesize);
-    amf_write_NamedBoolean(b, "stereo", strlen("stereo"), 1);
-
+	amf_write_NamedDouble(b,  "audiocodecid",   strlen("audiocodecid"),    audio->audiocodecid);
     amf_write_NamedString(b, "profile", strlen("profile"), "", 0);
 	amf_write_NamedString(b, "level", strlen("level"),  "", 0);
 	amf_write_objectEnd(b);
@@ -567,13 +559,14 @@ int sendOnMetaData(RtmpSession *session, Buffer *buffer)
     bs_t *b = bs_new(buffer->data, buffer->length);
     if (!b) 
         return NET_FAIL;
-
-    LOG("media info width %d, height %d, fps %d, profile %d, level %d",
-        session->media->video->width, 
-        session->media->video->height, 
-        session->media->video->fps, 
-        session->media->video->profile_idc, 
-        session->media->video->level_idc);
+        
+    if (session->media->video->queue)
+        LOG("media info width %d, height %d, fps %d, profile %d, level %d",
+            session->media->video->width, 
+            session->media->video->height, 
+            session->media->video->fps, 
+            session->media->video->profile_idc, 
+            session->media->video->level_idc);
 
     _buildOnMetaData(b, session->media->video, session->media->audio);
 
