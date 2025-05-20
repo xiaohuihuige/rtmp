@@ -55,9 +55,9 @@ RtmpMedia *createRtmpMedia(const char *app, const char *h264_file, const char *a
 void destroyRtmpMedia(RtmpMedia *media)
 {
     destroyH264Media(media->video);
-    media->video = NULL;
     destroyAacMedia(media->audio);
     media->audio = NULL;
+    media->video = NULL;
     FREE(media);
 }
 
@@ -68,16 +68,16 @@ static int sendVideoFrameToclient(void *args)
     Buffer *frame = getH264MediaFrame(session->media->video, session->channle[VIDEO_CHANNL].index);
     if (!frame) {
         session->channle[VIDEO_CHANNL].index = 0;
-        return NET_SUCCESS;
+        frame = getH264MediaFrame(session->media->video, session->channle[VIDEO_CHANNL].index);
+        if (!frame) 
+            return NET_SUCCESS;
     }
 
-    if (frame->frame_type == NAL_UNIT_TYPE_CODED_SLICE_IDR) 
-        sendFrameStream(session, session->media->video->avc_sequence, session->channle[VIDEO_CHANNL].base_time);
-
-    if (NET_SUCCESS != sendFrameStream(session, frame, session->channle[VIDEO_CHANNL].base_time))
+    if (NET_SUCCESS != sendFrameStream(session, frame, frame->timestamp))
+    {
+        ERR("send video error");
         return NET_FAIL;
-
-    session->channle[VIDEO_CHANNL].base_time += session->media->video->duration;
+    }
 
     session->channle[VIDEO_CHANNL].index++;
 
@@ -89,54 +89,47 @@ static int sendAudioFrameToclient(void *args)
     RtmpSession *session = (RtmpSession *)args;
 
     Buffer *frame = getAacMediaFrame(session->media->audio, session->channle[AUDIO_CHANNL].index);
-    if (!frame)
-    {
+    if (!frame) {
         session->channle[AUDIO_CHANNL].index = 0;
         return NET_SUCCESS;
     }
 
-    if (NET_SUCCESS != sendAudioStream(session, frame, session->media->audio->duration))
+    if (NET_SUCCESS != sendAudioStream(session, frame, frame->timestamp))
+    {
+        ERR("send audio error");
         return NET_FAIL;
+    }
 
     session->channle[AUDIO_CHANNL].index++;
 
-    return NET_SUCCESS;
+    return frame->frame_type;
 }
 
-
-static void _sendStreamGopCache(RtmpSession *session)
+static void _sendGopVideoFrameToclient(RtmpSession *session, int long_time)
 {
-    if (session->media->video->queue && session->media->audio->queue)
-    {   
-        int video_length = session->media->video->gop_size;
-        int audio_length = (int)session->media->video->gop_time / (session->media->audio->duration * 2);
-        sendAudioAdtsStream(session, session->media->audio->adts_sequence, session->channle[AUDIO_CHANNL].base_time);
-        LOG("video_length %d, audio_length  %d", video_length, audio_length);
-        while (video_length > 0 || audio_length > 0) {
-            if (audio_length > 0) {
-                audio_length--;
-                sendAudioFrameToclient(session);
-                sendAudioFrameToclient(session);
-            }
-            if (video_length > 0) {
-                video_length--;
-                sendVideoFrameToclient(session);
-            }
+    if (!session)
+        return ;
+    
+    int base_time = 0;
+    int video_time = 0;
+    int audio_time = 0;
+
+    while (base_time <= long_time)
+    {
+        if (base_time <= video_time && (base_time + 10) > video_time && session->media->video->queue)
+        {
+            sendVideoFrameToclient(session);
+            video_time += session->media->video->duration;
+            continue;
         }
-    } else if (!session->media->video->queue && session->media->audio->queue) {
-        sendAudioAdtsStream(session, session->media->audio->adts_sequence, session->channle[AUDIO_CHANNL].base_time);
-        if (session->media->video->gop_time > 0) {
-            int audio_length = (int)session->media->video->gop_time / session->media->audio->duration;
-            if (audio_length > 0) while(audio_length--) sendAudioFrameToclient(session);
-        } else {
-            int audio_length = (int)3000 / session->media->audio->duration;
-            if (audio_length > 0) while(audio_length--) sendAudioFrameToclient(session);  
+
+        if (base_time <= audio_time && (base_time + 10) > audio_time && session->media->audio->queue)
+        {
+            sendAudioFrameToclient(session);
+            audio_time += session->media->audio->duration;
+            continue;
         }
-    } else if (session->media->video->queue && !session->media->audio->queue) {
-        int video_length = session->media->video->gop_size;
-        if (video_length > 0) while(video_length--) sendVideoFrameToclient(session);
-    } else {
-        return;
+        base_time += 10;
     }
 }
 
@@ -145,11 +138,17 @@ int startPushSessionStream(RtmpSession *session)
     if (!session->media)
         return NET_FAIL;
 
-    _sendStreamGopCache(session);
+    if (session->media->video->queue)
+        sendVideoAVCStream(session, session->media->video->avc_sequence, 1000);
+
+    if (session->media->audio->queue)
+        sendAudioAdtsStream(session, session->media->audio->adts_sequence, 1000);
+
+    _sendGopVideoFrameToclient(session, 3000);
 
     if (session->media->video && session->media->video->queue) {
         session->video_task = addTimerTask(session->conn->tcps->scher, 
-                                            session->media->video->duration, 
+                                            session->media->video->duration,
                                             session->media->video->duration, 
                                             sendVideoFrameToclient, (void *)session);
         if (!session->video_task)

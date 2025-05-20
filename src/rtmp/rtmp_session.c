@@ -38,8 +38,6 @@ RtmpSession *createRtmpSession(Seesion *conn)
     session->video_task     = NULL;
     session->audio_task     = NULL;
     
-    session->channle[VIDEO_CHANNL].base_time = 1000;
-    session->channle[AUDIO_CHANNL].base_time = 1000;
     session->channle[VIDEO_CHANNL].index = 0;
     session->channle[AUDIO_CHANNL].index = 0;
 

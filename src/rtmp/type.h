@@ -32,6 +32,10 @@
 #define FPS 30
 #define VIDEODATARATE 0
 #define VIDEOCODECID 7
+#define VIDEOCODECID_H263 2
+#define VIDEOCODECID_H264 7
+#define VIDEOCODECID_H265 12
+
 #define AUDIODATARATE 125
 #define AUDIOCODECID 10
 #define PROFILE 0
@@ -213,6 +217,8 @@ typedef struct
 {
 	Buffer *avc_sequence;
 	FifoQueue *queue;
+	Buffer *pps_buffer;
+    Buffer *sps_buffer;
 	int fps;
 	int width;
 	int height;
@@ -222,10 +228,9 @@ typedef struct
 	int profile_idc;
 	int level_idc;
 	int frame_count;
-	int gop_size;
-	int gop_time;
 	int videodatarate;
 	int videocodecid;
+	double fractional_part;
 } VideoMedia;
 
 typedef struct 
@@ -239,6 +244,7 @@ typedef struct
 	int audiodatarate;
 	int audiosamplerate;
 	int audiosamplesize;
+	double fractional_part;
 } AudioMedia;
 
 typedef struct 
@@ -250,7 +256,6 @@ typedef struct
 
 typedef struct 
 {
-   int base_time;
    int index;
 } MediaChannle;
 

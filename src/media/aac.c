@@ -3,7 +3,15 @@
 #include "send_chunk.h"
 
 static int gSampleRateIndex[] = {96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350};
-
+// channelCfg 值	声道数	声道配置描述
+// 0	1	单声道（Mono）
+// 1	2	立体声（Stereo）
+// 2	3	3 声道（如 LCR）
+// 3	4	4 声道（如 L R Ls Rs）
+// 4	5	5.1 声道
+// 5	6	6.1 声道
+// 6	7	7.1 声道
+// 7	8	8 声道
 static int paresADTSHeader(AdtsHeader *header, uint8_t *data, int size)
 {
     bs_t *b = bs_new(data, size);
@@ -34,7 +42,27 @@ static int paresADTSHeader(AdtsHeader *header, uint8_t *data, int size)
     return bs_pos(b);
 }
 
-static int _runMediaStream(FifoQueue *frame_queue, Buffer *buffer, AdtsHeader *header)
+
+static uint32_t _calculateAudioTimeStamp(AudioMedia *media, uint32_t samplingFreqIndex)
+{
+    if (gSampleRateIndex[samplingFreqIndex] == 0)
+        return 0;
+
+    double timestamp =  (double)(1000 * 1024) / (gSampleRateIndex[samplingFreqIndex]);
+
+    uint32_t integer_part = (uint32_t)timestamp; // 整数部分
+
+    media->fractional_part = media->fractional_part + (timestamp - integer_part);
+
+    if (media->fractional_part > 1.0) {
+        integer_part++;
+        media->fractional_part--;
+    }
+
+    return integer_part;
+}
+
+static int _runMediaStream(AudioMedia *media, FifoQueue *frame_queue, Buffer *buffer, AdtsHeader *header)
 {
     if (buffer->index >= buffer->length)
         return NET_SUCCESS;
@@ -51,6 +79,8 @@ static int _runMediaStream(FifoQueue *frame_queue, Buffer *buffer, AdtsHeader *h
         Buffer *frame = createBuffer(header->aacFrameLength - len);
         if (!frame)
             return NET_FAIL;
+
+        frame->timestamp = _calculateAudioTimeStamp(media, header->samplingFreqIndex);
 
         memcpy(frame->data, buffer->data + buffer->index + len, frame->length);
 
@@ -80,7 +110,7 @@ AudioMedia *createAacMedia(Buffer *buffer)
 
     AdtsHeader header = {0};
 
-    while (_runMediaStream(media->queue, buffer, &header));
+    while (_runMediaStream(media, media->queue, buffer, &header));
 
     media->adts_sequence = rtmpadtsSequence(header.profile, header.samplingFreqIndex, 1, header.channelCfg);
     if (!media->adts_sequence)
@@ -94,6 +124,7 @@ AudioMedia *createAacMedia(Buffer *buffer)
     media->audiosamplerate = gSampleRateIndex[header.samplingFreqIndex];
     media->audiosamplesize = 16;
     media->duration = (int) (1024 * 1000)/media->audiosamplerate;
+    
     return media;
 }
 

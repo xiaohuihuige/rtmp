@@ -36,6 +36,8 @@ Buffer *rtmpWriteAudioFrame(Buffer *frame, int sample_rate_index, int sample_siz
     Buffer *buffer = createBuffer(frame->length + 2);
     if (!buffer)
         return NULL;
+    
+    buffer->timestamp = frame->timestamp;
 
     bs_t *b = bs_new(buffer->data, buffer->length);
     if (!b)
@@ -124,7 +126,7 @@ Buffer *rtmpadtsSequence(int profile, int sample_rate_index, int sample_size, in
     return buffer;
 }
 
-Buffer *rtmpWriteVideoFrame(uint8_t *data, int size, int type)
+Buffer *rtmpWriteVideoFrame(uint8_t *data, int size, int type, int timestamp)
 {
     int length = RTMP_FRAME_HEADER_LENGTH + size;
 
@@ -137,7 +139,8 @@ Buffer *rtmpWriteVideoFrame(uint8_t *data, int size, int type)
         return NULL;
 
     buffer->frame_type = type;
-
+    buffer->timestamp  = timestamp;
+    
     if (NAL_UNIT_TYPE_CODED_SLICE_IDR == type)
         bs_write_u8(b, 0x17); //0x27
     else 
@@ -200,11 +203,24 @@ Buffer *rtmpAvcSequence(Buffer *sps_frame, Buffer *pps_frame)
 }
 
 
-int sendFrameStream(RtmpSession *session, Buffer *frame, uint32_t timestamp)
+int sendFrameStream(RtmpSession *session, Buffer *frame, uint32_t delta)
+{
+    HeaderChunk header = {
+        .fmt = RTMP_CHUNK_TYPE_1,
+        .csid = RTMP_CHANNEL_DATA1,
+        .timestamp = delta,
+        .length = frame->length,
+        .type_id = RTMP_TYPE_VIDEO,
+    };
+
+    return _sendRtmpPacket(session, &header, frame);
+}
+
+int sendVideoAVCStream(RtmpSession *session, Buffer *frame, uint32_t timestamp)
 {
     HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_0,
-        .csid = RTMP_CHANNEL_DATA,
+        .csid = RTMP_CHANNEL_DATA1,
         .timestamp = timestamp,
         .length = frame->length,
         .type_id = RTMP_TYPE_VIDEO,

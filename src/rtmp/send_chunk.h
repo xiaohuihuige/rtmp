@@ -32,13 +32,16 @@ static inline int blockSendToClient(RtmpSession *session, uint8_t *data, int len
     return Send(session->conn->fd, data, len, 5);
 }
 
-int sendFrameStream(RtmpSession *session, Buffer *frame, uint32_t timestamp);
-int sendAudioStream(RtmpSession *session, Buffer *frame, uint32_t delta);
-int sendAudioAdtsStream(RtmpSession *session, Buffer *frame, uint32_t base_time);
-
-Buffer *rtmpWriteVideoFrame(uint8_t *data, int size, int type);
+//视频
+int sendFrameStream(RtmpSession *session, Buffer *frame, uint32_t delta);
+int sendVideoAVCStream(RtmpSession *session, Buffer *frame, uint32_t timestamp);
+Buffer *rtmpWriteVideoFrame(uint8_t *data, int size, int type, int timestamp);
 Buffer *rtmpAvcSequence(Buffer *sps_frame, Buffer *pps_frame);
 
+//音频
+int sendAudioStream(RtmpSession *session, Buffer *frame, uint32_t delta);
+int sendAudioAdtsStream(RtmpSession *session, Buffer *frame, uint32_t base_time);
 Buffer *rtmpadtsSequence(int profile, int sample_rate_index, int sample_size, int channel);
 Buffer *rtmpWriteAudioFrame(Buffer *frame, int sample_rate_index, int sample_size, int channel);
+
 #endif
