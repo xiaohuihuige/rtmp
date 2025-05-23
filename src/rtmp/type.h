@@ -44,6 +44,10 @@
 #define AUDIO_CHANNL 1
 #define VIDEO_CHANNL 0
 
+#define FILE_MEDIA  0
+#define LOCAL_MEDIA 1
+
+
 enum {
     NAL_UNIT_TYPE_UNSPECIFIED = 0,                    // Unspecified
     NAL_UNIT_TYPE_CODED_SLICE_NON_IDR,                // Coded slice of a non-IDR picture
@@ -252,11 +256,28 @@ typedef struct
     char app[64];
     VideoMedia *video;
     AudioMedia *audio;
+
+	VideoMedia *(*createH264Stream)(void *args);
+	void (*destroyH264Stream)(VideoMedia *meida);
+	Buffer *(*getH264Stream)(VideoMedia *media,int index);
+
+	AudioMedia *(*createAacStream)(void *args);
+	void (*destroyAacStream)(AudioMedia *meida);
+	Buffer *(*getAacStream)(AudioMedia *media,int index);
 } RtmpMedia;
 
 typedef struct 
 {
+	int time_base;
    int index;
 } MediaChannle;
+
+typedef struct 
+{
+	int type;
+    const char *app;
+    const char *h264_file;
+    const char *aac_file;
+} RtmpConfig;
 
 #endif

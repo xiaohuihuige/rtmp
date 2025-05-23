@@ -15,7 +15,7 @@ OBJ_FILE = $(wildcard $(OBJ_DIR)/*.o)
 
 EXECUTABLES = $(patsubst example/%.c, $(BIN_DIR)/%, $(wildcard example/*.c))
 
-CFLAGS = -I$(RTMP_DIR)  -I$(MEDIA_DIR) -lschedule  -lpthread -lrt -Wall -fPIC -g 
+CFLAGS = -I$(RTMP_DIR)  -I$(MEDIA_DIR) -lschedule  -lpthread -lrt -Wall -fPIC -g  -lasound
 
 .PHONY: all clean subdir TEMP_PATH
 

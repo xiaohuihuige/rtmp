@@ -5,7 +5,7 @@
 #include "type.h"
 #include "h264_sps.h"
 
-VideoMedia *createH264Media(Buffer *buffer);
+VideoMedia *createH264Media(const char *file);
 void destroyH264Media(VideoMedia *media);
 Buffer *getH264MediaFrame(VideoMedia *media, int index);
 

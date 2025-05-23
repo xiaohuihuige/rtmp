@@ -104,24 +104,32 @@ Buffer *getH264MediaFrame(VideoMedia *media, int index)
     return NULL; // 如果索引超出范围，返回 NULL
 }
 
-VideoMedia *createH264Media(Buffer *buffer)
+VideoMedia *createH264Media(const char *file)
 {
-    VideoMedia *media = CALLOC(1, VideoMedia); 
-    if (!media)
+    Buffer *buffer = readMediaFile(file);
+    if (!buffer)
         return NULL;
 
-    if (!buffer)
-        return media;
+    VideoMedia *media = CALLOC(1, VideoMedia); 
+    if (!media) {
+        FREE(buffer);
+        return NULL;
+    }
 
     media->queue = createFifiQueue();
-    if (!media->queue)
+    if (!media->queue){
+        FREE(buffer);
+        FREE(media);
         return NULL;
+    }
 
     while (1) 
         if (_runMediaStream(media, buffer)) break;
 
     media->frame_count = list_count_nodes(&media->queue->list);  
 
+    FREE(buffer);
+    
     return media;
 }
 

@@ -31,7 +31,7 @@ typedef struct
     unsigned int numberOfRawDataBlockInFrame; // 2 bit
 } AdtsHeader;
 
-AudioMedia *createAacMedia(Buffer *buffer);
+AudioMedia *createAacMedia(const char *file);
 void destroyAacMedia(AudioMedia *media);
 Buffer *getAacMediaFrame(AudioMedia *media, int index);
 

@@ -7,8 +7,9 @@
 #include "h264.h"
 #include "rtmp_session.h"
 #include "type.h"
+#include "util.h"
 
-RtmpMedia *createRtmpMedia(const char *app, const char *h264_file, const char *aac_file);
+RtmpMedia *createRtmpMedia(RtmpConfig *config);
 void destroyRtmpMedia(RtmpMedia *media);
 
 int findRtmpMedia(RtmpSession *session);

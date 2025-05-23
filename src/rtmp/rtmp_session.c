@@ -40,6 +40,8 @@ RtmpSession *createRtmpSession(Seesion *conn)
     
     session->channle[VIDEO_CHANNL].index = 0;
     session->channle[AUDIO_CHANNL].index = 0;
+    session->channle[VIDEO_CHANNL].time_base = 1000;
+    session->channle[AUDIO_CHANNL].time_base = 1000;
 
     LOG("create rtmp session success %p", session);
 

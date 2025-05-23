@@ -3,53 +3,37 @@
 #include "rtmp_server.h"
 #include "aac.h"
 
-static Buffer *_readMediaFile(const char *file_path)
-{
-    FILE *fp = fopen(file_path, "rb+");
-    if (!fp)
-        return NULL;
 
-    fseek(fp, 0, SEEK_END);
-    long fileSize = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-
-    Buffer *buffer = createBuffer(fileSize);
-    if (!buffer) {
-        fclose(fp);
-        return NULL;
-    }
-
-    fread(buffer->data, 1, fileSize, fp);
-
-    fclose(fp);
-
-    return buffer;
-}
-
-RtmpMedia *createRtmpMedia(const char *app, const char *h264_file, const char *aac_file)
+RtmpMedia *createRtmpMedia(RtmpConfig *config)
 {
     RtmpMedia *media = CALLOC(1, RtmpMedia);
     if (!media)
         return NULL;
 
-    snprintf(media->app, sizeof(media->app), "%s", app);
+    snprintf(media->app, sizeof(media->app), "%s", config->app);
 
-    Buffer *h264_buffer = NULL;
-    Buffer *acc_buffer  = NULL;
+    if (config->type == FILE_MEDIA) {
 
-    if (h264_file) {
-        h264_buffer = _readMediaFile(h264_file);
+        media->createH264Stream  = createH264Media;
+        media->destroyH264Stream = destroyH264Media;
+        media->getH264Stream     = getH264MediaFrame;
+
+        media->destroyAacStream  = destroyAacMedia;
+        media->getAacStream      = getAacMediaFrame;
+        media->createAacStream   = createAacMedia;
+
+        // media->video  = createH264Media(config->aac_file);
+        // media->audio  = createAacMedia(config->h264_file);
+    } else if (config->type == LOCAL_MEDIA)
+    {
+
     }
-
-    if (aac_file) {
-        acc_buffer = _readMediaFile(aac_file);
-    }
-
-    media->video  = createH264Media(h264_buffer);
-
-    media->audio  = createAacMedia(acc_buffer);
-    
     return media;
+}
+
+void setRtmpMediaCallBack()
+{
+
 }
 
 void destroyRtmpMedia(RtmpMedia *media)
@@ -73,12 +57,13 @@ static int sendVideoFrameToclient(void *args)
             return NET_SUCCESS;
     }
 
-    if (NET_SUCCESS != sendFrameStream(session, frame, frame->timestamp))
+    if (NET_SUCCESS != sendFrameStream(session, frame, session->channle[VIDEO_CHANNL].time_base))
     {
         ERR("send video error");
         return NET_FAIL;
     }
 
+    session->channle[VIDEO_CHANNL].time_base += frame->timestamp;
     session->channle[VIDEO_CHANNL].index++;
 
     return frame->frame_type;
@@ -91,7 +76,9 @@ static int sendAudioFrameToclient(void *args)
     Buffer *frame = getAacMediaFrame(session->media->audio, session->channle[AUDIO_CHANNL].index);
     if (!frame) {
         session->channle[AUDIO_CHANNL].index = 0;
-        return NET_SUCCESS;
+        frame = getAacMediaFrame(session->media->audio, session->channle[AUDIO_CHANNL].index);
+        if (!frame)
+            return NET_SUCCESS;
     }
 
     if (NET_SUCCESS != sendAudioStream(session, frame, frame->timestamp))
@@ -99,7 +86,7 @@ static int sendAudioFrameToclient(void *args)
         ERR("send audio error");
         return NET_FAIL;
     }
-
+    
     session->channle[AUDIO_CHANNL].index++;
 
     return frame->frame_type;
@@ -116,14 +103,14 @@ static void _sendGopVideoFrameToclient(RtmpSession *session, int long_time)
 
     while (base_time <= long_time)
     {
-        if (base_time <= video_time && (base_time + 10) > video_time && session->media->video->queue)
+        if (base_time <= video_time && (base_time + 10) > video_time && session->media->video)
         {
             sendVideoFrameToclient(session);
             video_time += session->media->video->duration;
             continue;
         }
 
-        if (base_time <= audio_time && (base_time + 10) > audio_time && session->media->audio->queue)
+        if (base_time <= audio_time && (base_time + 10) > audio_time && session->media->audio)
         {
             sendAudioFrameToclient(session);
             audio_time += session->media->audio->duration;
@@ -138,13 +125,13 @@ int startPushSessionStream(RtmpSession *session)
     if (!session->media)
         return NET_FAIL;
 
-    if (session->media->video->queue)
-        sendVideoAVCStream(session, session->media->video->avc_sequence, 1000);
+    if (session->media->video)
+        sendVideoAVCStream(session, session->media->video->avc_sequence, session->channle[VIDEO_CHANNL].time_base);
 
-    if (session->media->audio->queue)
-        sendAudioAdtsStream(session, session->media->audio->adts_sequence, 1000);
+    if (session->media->audio)
+        sendAudioAdtsStream(session, session->media->audio->adts_sequence, session->channle[AUDIO_CHANNL].time_base);
 
-    _sendGopVideoFrameToclient(session, 3000);
+    _sendGopVideoFrameToclient(session, 6000);
 
     if (session->media->video && session->media->video->queue) {
         session->video_task = addTimerTask(session->conn->tcps->scher, 

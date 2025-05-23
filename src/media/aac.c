@@ -94,15 +94,16 @@ static int _runMediaStream(AudioMedia *media, FifoQueue *frame_queue, Buffer *bu
     return NET_SUCCESS;
 }
 
-AudioMedia *createAacMedia(Buffer *buffer)
+
+AudioMedia *createFileAacMedia(const char *file)
 {
+    Buffer *buffer = readMediaFile(file);
+    if (!buffer)
+        return NULL;
+
     AudioMedia *media = CALLOC(1, AudioMedia);
     if (!media)
         return NULL;
-
-    if (!buffer)
-        return media;
-
 
     media->queue = createFifiQueue();
     if (!media->queue)
@@ -117,6 +118,34 @@ AudioMedia *createAacMedia(Buffer *buffer)
         return NULL;
 
     media->frame_count = list_count_nodes(&media->queue->list);
+
+    media->stereo = header.channelCfg;
+    media->audiocodecid = AUDIOCODECID;
+    media->audiodatarate = AUDIODATARATE;
+    media->audiosamplerate = gSampleRateIndex[header.samplingFreqIndex];
+    media->audiosamplesize = 16;
+    media->duration = (int) (1024 * 1000)/media->audiosamplerate;
+
+    FREE(buffer);
+    
+    return media;
+}
+
+AudioMedia *createAacMedia(Buffer *buffer)
+{
+    AudioMedia *media = CALLOC(1, AudioMedia);
+    if (!media)
+        return NULL;
+
+    media->queue = createFifiQueue();
+    if (!media->queue)
+        return NULL;
+
+    AdtsHeader header = {0};
+
+    media->adts_sequence = rtmpadtsSequence(header.profile, header.samplingFreqIndex, 1, header.channelCfg);
+    if (!media->adts_sequence)
+        return NULL;
 
     media->stereo = header.channelCfg;
     media->audiocodecid = AUDIOCODECID;
