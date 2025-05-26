@@ -5,8 +5,7 @@
 
 static int _wirteChunkHeader(bs_t *b, HeaderChunk *header)
 {
-    if (!b || !header)
-        return -1;
+    assert(b || header);
 
     bs_write_u(b, 2, header->fmt);
     if (header->csid >= 64 + 255) {
@@ -41,11 +40,15 @@ static int _wirteChunkHeader(bs_t *b, HeaderChunk *header)
 
 int writeChunkHeader(bs_t *b, HeaderChunk *header)
 {
+    assert(b || header);
+
     return _wirteChunkHeader(b, header);
 }
 
 static void _readBasicHeader(bs_t *b, HeaderChunk *header)
 {
+    assert(b || header);
+
     header->fmt = bs_read_u(b, 2);
     header->csid = bs_read_u(b, 6);
 
@@ -61,6 +64,8 @@ static void _readBasicHeader(bs_t *b, HeaderChunk *header)
 
 static void _readMessageHeader(bs_t *b, HeaderChunk *header)
 {
+    assert(b || header);
+
     if (header->fmt == RTMP_CHUNK_TYPE_3)
         return;
 
@@ -97,6 +102,9 @@ static void _readMessageHeader(bs_t *b, HeaderChunk *header)
 
 void _showChunkHeader(HeaderChunk *header)
 {
+    if (!header)
+        return;
+
     LOG("fmt %d, csid %d, timestemp %d, header_len %d, length %d, type %d, stream %d", 
             header->fmt, header->csid, header->timestamp, header->header_len,
             header->length, header->type_id, header->stream_id);
@@ -104,6 +112,9 @@ void _showChunkHeader(HeaderChunk *header)
 
 int readHeaderChunk(Buffer *buffer, HeaderChunk *header)
 {
+    if (!buffer || !header)
+        return NET_FAIL;
+
     bs_t *b = bs_new(buffer->data + buffer->index,  buffer->length);
     if (!b)
         return NET_FAIL;

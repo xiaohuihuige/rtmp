@@ -21,11 +21,12 @@ static void _buildCreateStreanResult(bs_t *b, double transactionId, double strea
 static void _buildWriteOnstatus(bs_t *b,  double transactionId, const char* level, const char* code, const char* description);
 static void _buildSampleAccess(bs_t *b,  double stream_id, const char *sample_access);
 void _buildStreamIsRecord(bs_t *b, uint32_t streamId);
-static void _buildOnMetaData(bs_t *b, VideoMedia *video, AudioMedia *audio);
-
+static void _buildOnMetaData(bs_t *b, RtmpMedia *media);
 
 static void _buildPeerBandwidth(bs_t *b, uint32_t window_size, uint8_t limit_type)
 {
+    assert(b);
+    
     HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_0,
         .csid = RTMP_CHANNEL_PROTOCOL,
@@ -43,6 +44,8 @@ static void _buildPeerBandwidth(bs_t *b, uint32_t window_size, uint8_t limit_typ
 
 static void _buildSetChunkSize(bs_t *b, int chunk_size)
 {
+    assert(b);
+
     HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_0,
         .csid = RTMP_CHANNEL_PROTOCOL,
@@ -59,6 +62,8 @@ static void _buildSetChunkSize(bs_t *b, int chunk_size)
 
 void _buildSetAbort(bs_t *b, uint32_t chunk_streamid)
 {
+    assert(b);
+
     HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_0,
         .csid = RTMP_CHANNEL_PROTOCOL,
@@ -75,6 +80,8 @@ void _buildSetAbort(bs_t *b, uint32_t chunk_streamid)
 
 void _buildSetAcknowledgement(bs_t *b, uint32_t sequence_number)
 {
+    assert(b);
+
     HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_0,
         .csid = RTMP_CHANNEL_PROTOCOL,
@@ -91,6 +98,8 @@ void _buildSetAcknowledgement(bs_t *b, uint32_t sequence_number)
 
 static void _buildWindowAcknowledgementSize(bs_t *b, uint32_t window_size)
 {
+    assert(b);
+
     HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_0,
         .csid = RTMP_CHANNEL_PROTOCOL,
@@ -107,6 +116,8 @@ static void _buildWindowAcknowledgementSize(bs_t *b, uint32_t window_size)
 
 static void _buildSetStreamBegin(bs_t *b, uint32_t streamId)
 {
+    assert(b);
+
     HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_0,
         .csid = RTMP_CHANNEL_PROTOCOL,
@@ -125,6 +136,8 @@ static void _buildSetStreamBegin(bs_t *b, uint32_t streamId)
 
 void _buildSetStreamEof(bs_t *b, uint32_t streamId)
 {
+    assert(b);
+
     HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_0,
         .csid = RTMP_CHANNEL_PROTOCOL,
@@ -142,6 +155,8 @@ void _buildSetStreamEof(bs_t *b, uint32_t streamId)
 
 void _buildStreamDry(bs_t *b, uint32_t streamId)
 {
+    assert(b);
+
     HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_0,
         .csid = RTMP_CHANNEL_PROTOCOL,
@@ -159,6 +174,8 @@ void _buildStreamDry(bs_t *b, uint32_t streamId)
 
 void _buildSetBufferLength(bs_t *b, uint32_t streamId, uint32_t ms)
 {
+    assert(b);
+
     HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_0,
         .csid = RTMP_CHANNEL_PROTOCOL,
@@ -177,6 +194,8 @@ void _buildSetBufferLength(bs_t *b, uint32_t streamId, uint32_t ms)
 
 void _buildSetStreamIsRecord(bs_t *b, uint32_t streamId)
 {
+    assert(b);
+    
 	HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_0,
         .csid = RTMP_CHANNEL_PROTOCOL,
@@ -194,6 +213,8 @@ void _buildSetStreamIsRecord(bs_t *b, uint32_t streamId)
 
 void _buildSetPing(bs_t *b, uint32_t timstamp)
 {
+    assert(b);
+
 	HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_0,
         .csid = RTMP_CHANNEL_PROTOCOL,
@@ -211,6 +232,8 @@ void _buildSetPing(bs_t *b, uint32_t timstamp)
 
 void _buildSetPong(bs_t *b, uint32_t timstamp)
 {
+    assert(b);
+
     HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_0,
         .csid = RTMP_CHANNEL_PROTOCOL,
@@ -231,6 +254,7 @@ static void _buildConnectResult(bs_t *b,
             double capabilities, const char* code, 
             const char* level, const char* description, double encoding)
 {
+    assert(b);
 
     int length = AMF_STRING_LENGTH("_result") 
                 + AMF_DOUBLE_LENGTH 
@@ -276,6 +300,7 @@ static void _buildConnectResult(bs_t *b,
 
 static void _buildCreateStreanResult(bs_t *b, double transactionId, double stream_id)
 {
+    assert(b);
 
     int length = AMF_STRING_LENGTH("_result")  + AMF_DOUBLE_LENGTH + AMF_NULL_LENGTH + AMF_DOUBLE_LENGTH;
 
@@ -298,6 +323,8 @@ static void _buildCreateStreanResult(bs_t *b, double transactionId, double strea
 
 static void _buildWriteOnstatus(bs_t *b,  double transactionId, const char* level, const char* code, const char* description)
 {
+    assert(b);
+
     int length = AMF_STRING_LENGTH("onStatus")  
                 + AMF_DOUBLE_LENGTH 
                 + AMF_NULL_LENGTH 
@@ -332,6 +359,8 @@ static void _buildWriteOnstatus(bs_t *b,  double transactionId, const char* leve
 
 static void _buildSampleAccess(bs_t *b,  double stream_id, const char *sample_access)
 {
+    assert(b);
+
     int length = AMF_STRING_LENGTH(sample_access)  + AMG_BOOLEAN_LENGTH + AMG_BOOLEAN_LENGTH;
         
     HeaderChunk header = {
@@ -352,6 +381,8 @@ static void _buildSampleAccess(bs_t *b,  double stream_id, const char *sample_ac
 
 static void _buildOnMetaData(bs_t *b, RtmpMedia *media)
 {
+    assert(b || media);
+
     int length = AMF_STRING_LENGTH("onMetaData")  
                 + AMF_OBJECT_LENGTH
                 + AMF_NAMESTRING_LENGTH("Server", "nginx-rtmp-module")
@@ -403,6 +434,8 @@ static void _buildOnMetaData(bs_t *b, RtmpMedia *media)
 
 void _buildStreamIsRecord(bs_t *b, uint32_t streamId)
 {
+    assert(b);
+
     HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_0,
         .csid = RTMP_CHANNEL_PROTOCOL,
@@ -421,6 +454,9 @@ void _buildStreamIsRecord(bs_t *b, uint32_t streamId)
 
 int sendPeerBandwidth(RtmpSession *session, Buffer *buffer, uint32_t window_size, uint8_t limit_type)
 {
+    if (!session || !buffer)
+        return NET_FAIL;
+
     bs_t *b = bs_new(buffer->data, buffer->length);
     if (!b) 
         return NET_FAIL;
@@ -439,6 +475,9 @@ int sendPeerBandwidth(RtmpSession *session, Buffer *buffer, uint32_t window_size
 
 int sendAcknowledgement(RtmpSession *session, Buffer *buffer, uint32_t acknowledgement)
 {
+    if (!session || !buffer)
+        return NET_FAIL;
+        
     bs_t *b = bs_new(buffer->data, buffer->length);
     if (!b) 
         return NET_FAIL;
@@ -456,6 +495,9 @@ int sendAcknowledgement(RtmpSession *session, Buffer *buffer, uint32_t acknowled
 
 int sendChunkSize(RtmpSession *session, Buffer *buffer, int chunk_size)
 {
+    if (!session || !buffer)
+        return NET_FAIL;
+
     bs_t *b = bs_new(buffer->data, buffer->length);
     if (!b) 
         return NET_FAIL;
@@ -473,6 +515,9 @@ int sendChunkSize(RtmpSession *session, Buffer *buffer, int chunk_size)
 
 int sendConnectResult(RtmpSession *session, Buffer *buffer, double transactionId)
 {
+    if (!session || !buffer)
+        return NET_FAIL;
+
     bs_t *b = bs_new(buffer->data, buffer->length);
     if (!b) 
         return NET_FAIL;
@@ -493,6 +538,9 @@ int sendConnectResult(RtmpSession *session, Buffer *buffer, double transactionId
 
 int sendCreateStreamResult(RtmpSession *session, Buffer *buffer, double transactionId, uint32_t stream_id)
 {
+    if (!session || !buffer)
+        return NET_FAIL;
+
     bs_t *b = bs_new(buffer->data, buffer->length);
     if (!b) 
         return NET_FAIL;
@@ -508,6 +556,9 @@ int sendCreateStreamResult(RtmpSession *session, Buffer *buffer, double transact
 
 int sendSetStreamBegin(RtmpSession *session, Buffer *buffer, uint32_t stream_id)
 {
+    if (!session || !buffer)
+        return NET_FAIL;
+
     bs_t *b = bs_new(buffer->data, buffer->length);
     if (!b) 
         return NET_FAIL;
@@ -523,6 +574,9 @@ int sendSetStreamBegin(RtmpSession *session, Buffer *buffer, uint32_t stream_id)
 
 int sendOnstatus(RtmpSession *session, Buffer *buffer, double transactionId,  const char *app)
 {
+    if (!session || !buffer)
+        return NET_FAIL;
+
     bs_t *b = bs_new(buffer->data, buffer->length);
     if (!b) 
         return NET_FAIL;
@@ -541,6 +595,9 @@ int sendOnstatus(RtmpSession *session, Buffer *buffer, double transactionId,  co
 
 int sendSampleAccess(RtmpSession *session, Buffer *buffer,  uint32_t stream_id)
 {
+    if (!session || !buffer)
+        return NET_FAIL;
+
     bs_t *b = bs_new(buffer->data, buffer->length);
     if (!b) 
         return NET_FAIL;
@@ -556,7 +613,7 @@ int sendSampleAccess(RtmpSession *session, Buffer *buffer,  uint32_t stream_id)
 
 int sendOnMetaData(RtmpSession *session, Buffer *buffer)
 {
-    if (!session->media)
+    if (!session || !session->media)
         return NET_FAIL;
         
     bs_t *b = bs_new(buffer->data, buffer->length);

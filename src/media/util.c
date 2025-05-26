@@ -26,3 +26,31 @@ Buffer *readMediaFile(const char *file_path)
     return buffer;
 }
 
+void printfRtmpAddr(int port, const char *app)
+{
+    char play_ip[64] = {0};
+
+    getHostAddrs(play_ip, sizeof(play_ip));
+
+    LOG("play rtmp address 【rtmp://%s:%d/%s】", play_ip, port, app);
+}
+
+
+uint32_t calculateTimeStamp(double *fractional_part, int fps, int sample_number)
+{
+    if (!fps)
+        return 0;
+
+    double timestamp =  (double)(1000 * sample_number) / fps;
+
+    uint32_t integer_part = (uint32_t)timestamp; // 整数部分
+
+    *fractional_part = *fractional_part + (timestamp - integer_part);
+
+    if (*fractional_part > 1.0) {
+        integer_part++;
+        (*fractional_part)--;
+    }
+
+    return integer_part;
+}

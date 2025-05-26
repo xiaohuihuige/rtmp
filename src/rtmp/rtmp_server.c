@@ -1,5 +1,6 @@
 #include "rtmp_server.h"
 #include "rtmp_session.h"
+#include "util.h"
 
 static void _recvMessage(void *seesion, Buffer *buffer)
 {
@@ -16,21 +17,15 @@ static void _destroyRtmpSession(void *seesion)
     return destroyRtmpSession((RtmpSession *)seesion);
 }
 
-static void _printfRtmpAddr(int port, const char *app)
+static void _closeMeidaStream(FifoQueue *stream)
 {
-    char play_ip[64] = {0};
+    if (!stream)
+        return;
 
-    getHostAddrs(play_ip, sizeof(play_ip));
-
-    LOG("play rtmp address 【rtmp://%s:%d/%s】", play_ip, port, app);
-}
-
-static void _closeMeidaStream(RtmpServer *rtmp)
-{
     FifoQueue *task_node = NULL;
     FifoQueue *temp_node = NULL;
 
-    list_for_each_entry_safe(task_node, temp_node, &rtmp->stream->list, list)
+    list_for_each_entry_safe(task_node, temp_node, &stream->list, list)
     {
         if (task_node->task)
             destroyRtmpMedia((RtmpMedia *)task_node->task);
@@ -38,7 +33,7 @@ static void _closeMeidaStream(RtmpServer *rtmp)
 
         deleteFifoQueueTask(task_node, Seesion);
     }
-    FREE(rtmp->stream);  
+    FREE(stream);  
 }
 
 RtmpServer *createRtmpServer(const char *ip, int port)
@@ -46,28 +41,32 @@ RtmpServer *createRtmpServer(const char *ip, int port)
     if (!ip)
         return NULL;
 
-    RtmpServer *rtmp = CALLOC(1, RtmpServer);
-    if (!rtmp )
-        return NULL;
-
-    rtmp->stream = createFifiQueue();
-    if (!rtmp->stream) {
-        FREE(rtmp);
-        return NULL;
-    }
-
-    rtmp->server = createTcpServer(ip, port);
-    if (!rtmp->server) {
-        _closeMeidaStream(rtmp);
-        FREE(rtmp);
-        return NULL;
-    }
-
-    setTcpServerCallBack(rtmp->server, _createRtmpSession, _recvMessage, _destroyRtmpSession);
+    RtmpServer *rtmp = NULL;
     
-    setParentClassServer(rtmp->server, rtmp);
+    do {
+        rtmp = CALLOC(1, RtmpServer);
+        if (!rtmp )
+            break;
 
-    return rtmp;
+        rtmp->stream = createFifiQueue();
+        if (!rtmp->stream)
+            break;
+
+        rtmp->server = createTcpServer(ip, port);
+        if (!rtmp->server) 
+            break;
+
+        setTcpServerCallBack(rtmp->server, _createRtmpSession, _recvMessage, _destroyRtmpSession);
+        
+        setParentClassServer(rtmp->server, rtmp);
+
+        return rtmp;
+        
+    } while (0);
+
+    destroyRtmpServer(rtmp);
+
+    return NULL;
 }
 
 void destroyRtmpServer(RtmpServer *rtmp)
@@ -77,8 +76,8 @@ void destroyRtmpServer(RtmpServer *rtmp)
 
     destroyTcpServer(rtmp->server);
 
-    if (rtmp->stream)
-        _closeMeidaStream(rtmp);
+    _closeMeidaStream(rtmp->stream);
+    rtmp->stream = NULL;
 
     FREE(rtmp);
 }
@@ -88,7 +87,7 @@ void addRtmpServerMedia(RtmpServer *rtmp, RtmpMedia *media)
     if (!rtmp || !media)
         return;
 
-    _printfRtmpAddr(rtmp->server->port, media->app);
+    printfRtmpAddr(rtmp->server->port, media->app);
 
     enqueue(rtmp->stream, media); 
 }

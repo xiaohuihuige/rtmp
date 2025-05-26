@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <unistd.h>
-#include "alsa.h"
 
 volatile sig_atomic_t keep_running = 1;
 
@@ -75,17 +74,13 @@ int main()
         exit(EXIT_FAILURE);
     }
 
-    Alsa *alsa = createAlsaAudio("plughw:2,0", 16000);
-    if (!alsa)
-        return -1;
-
     RtmpServer * rtmp = createRtmpServer(DEFAULT_IP, 3000);
 
-    addRtmpServerMedia(rtmp, createRtmpMedia("app", FILE_AAC, "./resources/test.h264", FILE_AAC, "./resources/suiyueruge.aac"));
-    addRtmpServerMedia(rtmp, createRtmpMedia("cyx", FILE_AAC, NULL, FILE_AAC, "./resources/suiyueruge.aac"));
-    addRtmpServerMedia(rtmp, createRtmpMedia("live", FILE_AAC, "./resources/test1.h264", FILE_AAC, NULL));
-    addRtmpServerMedia(rtmp, createRtmpMedia("girl", FILE_AAC, "./resources/girl.h264", FILE_AAC, NULL));
-    addRtmpServerMedia(rtmp, createRtmpMedia("mountain",FILE_AAC, "./resources/mountain.h264", FILE_AAC, NULL));
+    RtmpMedia *app_media = createRtmpMedia(createFileRtmpConfig("app", "./resources/test.h264", "./resources/suiyueruge.aac"));
+    RtmpMedia *light_media = createRtmpMedia(createFileRtmpConfig("light", NULL, "./resources/light.aac"));
+
+    addRtmpServerMedia(rtmp, app_media);
+    addRtmpServerMedia(rtmp, light_media);
 
     while (keep_running) {
         sleep(1);

@@ -33,6 +33,9 @@ static int _sendRtmpPacket(RtmpSession *session, HeaderChunk *header, Buffer *fr
 
 Buffer *rtmpWriteAudioFrame(Buffer *frame, int sample_rate_index, int sample_size, int channel)
 {
+    if (!frame)
+        return NULL;
+
     Buffer *buffer = createBuffer(frame->length + 2);
     if (!buffer)
         return NULL;
@@ -40,8 +43,10 @@ Buffer *rtmpWriteAudioFrame(Buffer *frame, int sample_rate_index, int sample_siz
     buffer->timestamp = frame->timestamp;
 
     bs_t *b = bs_new(buffer->data, buffer->length);
-    if (!b)
+    if (!b){
+        FREE(buffer);
         return NULL;
+    }
 
     bs_write_u(b, 4, 0x0A);
     bs_write_u(b, 2, sample_rate_index - 1);
@@ -128,6 +133,9 @@ Buffer *rtmpadtsSequence(int profile, int sample_rate_index, int sample_size, in
 
 Buffer *rtmpWriteVideoFrame(uint8_t *data, int size, int type, int timestamp)
 {
+    if (!data)
+        return NULL;
+
     int length = RTMP_FRAME_HEADER_LENGTH + size;
 
     Buffer *buffer = createBuffer(length);
@@ -212,6 +220,8 @@ int sendFrameStream(RtmpSession *session, Buffer *frame, uint32_t delta)
     //     .length = frame->length,
     //     .type_id = RTMP_TYPE_VIDEO,
     // };
+    if (!session || !frame)
+        return NET_FAIL;
 
     HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_0,
@@ -227,6 +237,9 @@ int sendFrameStream(RtmpSession *session, Buffer *frame, uint32_t delta)
 
 int sendVideoAVCStream(RtmpSession *session, Buffer *frame, uint32_t timestamp)
 {
+    if (!session || !frame)
+        return NET_FAIL;
+
     HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_0,
         .csid = RTMP_CHANNEL_DATA,
@@ -241,6 +254,9 @@ int sendVideoAVCStream(RtmpSession *session, Buffer *frame, uint32_t timestamp)
 
 int sendAudioStream(RtmpSession *session, Buffer *frame, uint32_t delta)
 {
+    if (!session || !frame)
+        return NET_FAIL;
+
     HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_1,
         .csid = RTMP_CHANNEL_DATA,
@@ -254,6 +270,10 @@ int sendAudioStream(RtmpSession *session, Buffer *frame, uint32_t delta)
 
 int sendAudioAdtsStream(RtmpSession *session, Buffer *frame, uint32_t base_time)
 {
+
+    if (!session || !frame)
+        return NET_FAIL;
+
     HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_0,
         .csid = RTMP_CHANNEL_DATA,

@@ -3,25 +3,7 @@
 #include "send_chunk.h"
 #include "h264_sps.h"
 #include "h264_nal.h"
-
-static uint32_t _calculateVideoTimeStamp(VideoMedia *media, int fps)
-{
-    if (fps == 0)
-        return 0;
-  
-    double timestamp =  (double) 1000 / fps; 
-
-    uint32_t integer_part = (uint32_t)timestamp; // 整数部分
-
-    media->fractional_part = media->fractional_part + (timestamp - integer_part);
-
-    if (media->fractional_part > 1.0) {
-        integer_part++;
-        media->fractional_part--;
-    }
-
-    return integer_part;
-}
+#include "util.h"
 
 static void _paserNaluPacket(VideoMedia *media, uint8_t *data, int size, int type)
 {   
@@ -60,7 +42,7 @@ static void _paserNaluPacket(VideoMedia *media, uint8_t *data, int size, int typ
         FREE(sps);
     }
 
-    enqueue(media->queue, rtmpWriteVideoFrame(data, size, type, _calculateVideoTimeStamp(media, media->fps)));
+    enqueue(media->queue, rtmpWriteVideoFrame(data, size, type, calculateTimeStamp(&media->fractional_part, media->fps, 1)));
 }
 
 static int _runMediaStream(VideoMedia *media, Buffer *buffer)
@@ -106,35 +88,43 @@ Buffer *getH264MediaFrame(VideoMedia *media, int index)
 
 VideoMedia *createH264Media(const char *file)
 {
-    Buffer *buffer = readMediaFile(file);
-    if (!buffer)
-        return NULL;
+    Buffer *buffer    = NULL;
+    VideoMedia *media = NULL;
 
-    VideoMedia *media = CALLOC(1, VideoMedia); 
-    if (!media) {
+    do {
+        buffer = readMediaFile(file);
+        if (!buffer)
+            break;
+
+        media = CALLOC(1, VideoMedia); 
+        if (!media) 
+            break;
+
+        media->queue = createFifiQueue();
+        if (!media->queue)
+            break;
+
+        while (1) if (_runMediaStream(media, buffer)) break;
+
+        media->frame_count = list_count_nodes(&media->queue->list);  
+
         FREE(buffer);
-        return NULL;
-    }
-
-    media->queue = createFifiQueue();
-    if (!media->queue){
-        FREE(buffer);
-        FREE(media);
-        return NULL;
-    }
-
-    while (1) 
-        if (_runMediaStream(media, buffer)) break;
-
-    media->frame_count = list_count_nodes(&media->queue->list);  
-
-    FREE(buffer);
+        
+        return media;
+    } while (0);
     
-    return media;
+    FREE(buffer);
+    destroyH264Media(media);
+
+    return NULL;
+
 }
 
 void destroyH264Media(VideoMedia *media)
 {
+    if (!media)
+        return;
+
     if (media->queue)
         destroyFifoQueue(media->queue, Buffer);
 

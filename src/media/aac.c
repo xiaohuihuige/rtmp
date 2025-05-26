@@ -42,26 +42,6 @@ static int paresADTSHeader(AdtsHeader *header, uint8_t *data, int size)
     return bs_pos(b);
 }
 
-
-static uint32_t _calculateAudioTimeStamp(AudioMedia *media, uint32_t samplingFreqIndex)
-{
-    if (gSampleRateIndex[samplingFreqIndex] == 0)
-        return 0;
-
-    double timestamp =  (double)(1000 * 1024) / (gSampleRateIndex[samplingFreqIndex]);
-
-    uint32_t integer_part = (uint32_t)timestamp; // 整数部分
-
-    media->fractional_part = media->fractional_part + (timestamp - integer_part);
-
-    if (media->fractional_part > 1.0) {
-        integer_part++;
-        media->fractional_part--;
-    }
-
-    return integer_part;
-}
-
 static int _runMediaStream(AudioMedia *media, FifoQueue *frame_queue, Buffer *buffer, AdtsHeader *header)
 {
     if (buffer->index >= buffer->length)
@@ -80,7 +60,7 @@ static int _runMediaStream(AudioMedia *media, FifoQueue *frame_queue, Buffer *bu
         if (!frame)
             return NET_FAIL;
 
-        frame->timestamp = _calculateAudioTimeStamp(media, header->samplingFreqIndex);
+        frame->timestamp = calculateTimeStamp(&media->fractional_part, gSampleRateIndex[header->samplingFreqIndex], 1024);
 
         memcpy(frame->data, buffer->data + buffer->index + len, frame->length);
 
@@ -95,70 +75,63 @@ static int _runMediaStream(AudioMedia *media, FifoQueue *frame_queue, Buffer *bu
 }
 
 
-AudioMedia *createFileAacMedia(const char *file)
+AudioMedia *createAacMedia(const char *file)
 {
-    Buffer *buffer = readMediaFile(file);
-    if (!buffer)
-        return NULL;
 
-    AudioMedia *media = CALLOC(1, AudioMedia);
-    if (!media)
-        return NULL;
+    Buffer *buffer = NULL;
+    AudioMedia *media  = NULL;
 
-    media->queue = createFifiQueue();
-    if (!media->queue)
-        return NULL;
+    do {
+        buffer = readMediaFile(file);
+        if (!buffer)
+            break;
 
-    AdtsHeader header = {0};
+        media = CALLOC(1, AudioMedia);
+        if (!media)
+            break;
 
-    while (_runMediaStream(media, media->queue, buffer, &header));
+        media->queue = createFifiQueue();
+        if (!media->queue)
+            break;
 
-    media->adts_sequence = rtmpadtsSequence(header.profile, header.samplingFreqIndex, 1, header.channelCfg);
-    if (!media->adts_sequence)
-        return NULL;
+        AdtsHeader header = {0};
 
-    media->frame_count = list_count_nodes(&media->queue->list);
+        while (_runMediaStream(media, media->queue, buffer, &header));
 
-    media->stereo = header.channelCfg;
-    media->audiocodecid = AUDIOCODECID;
-    media->audiodatarate = AUDIODATARATE;
-    media->audiosamplerate = gSampleRateIndex[header.samplingFreqIndex];
-    media->audiosamplesize = 16;
-    media->duration = (int) (1024 * 1000)/media->audiosamplerate;
+        media->adts_sequence = rtmpadtsSequence(header.profile, header.samplingFreqIndex, 1, header.channelCfg);
+        if (!media->adts_sequence)
+            break;
+
+        media->frame_count = list_count_nodes(&media->queue->list);
+
+        media->stereo = header.channelCfg;
+        media->audiocodecid = AUDIOCODECID;
+        media->audiodatarate = AUDIODATARATE;
+        media->audiosamplerate = gSampleRateIndex[header.samplingFreqIndex];
+        media->audiosamplesize = 16;
+        media->duration = (int) (1024 * 1000)/media->audiosamplerate;
+
+        FREE(buffer);
+
+        return media;
+
+    } while (0);
+
+    if (media->queue)
+        destroyFifoQueue(media->queue, Buffer);
 
     FREE(buffer);
-    
-    return media;
-}
 
-AudioMedia *createAacMedia(Buffer *buffer)
-{
-    AudioMedia *media = CALLOC(1, AudioMedia);
-    if (!media)
-        return NULL;
+    FREE(media);
 
-    media->queue = createFifiQueue();
-    if (!media->queue)
-        return NULL;
-
-    AdtsHeader header = {0};
-
-    media->adts_sequence = rtmpadtsSequence(header.profile, header.samplingFreqIndex, 1, header.channelCfg);
-    if (!media->adts_sequence)
-        return NULL;
-
-    media->stereo = header.channelCfg;
-    media->audiocodecid = AUDIOCODECID;
-    media->audiodatarate = AUDIODATARATE;
-    media->audiosamplerate = gSampleRateIndex[header.samplingFreqIndex];
-    media->audiosamplesize = 16;
-    media->duration = (int) (1024 * 1000)/media->audiosamplerate;
-    
-    return media;
+    return NULL;
 }
 
 void destroyAacMedia(AudioMedia *media)
 {
+    if (!media)
+        return;
+
     if (media->queue)
         destroyFifoQueue(media->queue, Buffer);
     FREE(media->adts_sequence);

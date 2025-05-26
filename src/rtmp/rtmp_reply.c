@@ -1,9 +1,12 @@
 #include "rtmp_reply.h"
 #include "control_message.h"
-#include "rtmp_media.h"
+#include "rtmp_publish.h"
 
 int rtmpSendConnect(RtmpSession *session, HeaderChunk *header, int code, double transactionId)
 {
+    if (!session || !header)
+        return NET_FAIL;
+
     Buffer *buffer = createBuffer(500);
     if (!buffer)
         return NET_FAIL;
@@ -25,6 +28,9 @@ int rtmpSendConnect(RtmpSession *session, HeaderChunk *header, int code, double 
 
 int rtmpSendResult(RtmpSession *session, HeaderChunk *header, int code, double transactionId)
 {
+    if (!session || !header)
+        return NET_FAIL;
+
     Buffer *buffer = createBuffer(300);
     if (!buffer)
         return NET_FAIL;
@@ -38,6 +44,9 @@ int rtmpSendResult(RtmpSession *session, HeaderChunk *header, int code, double t
 
 int rtmpSendOnplay(RtmpSession *session, HeaderChunk *header, int code, double transactionId)
 {
+    if (!session || !header)
+        return NET_FAIL;
+
     Buffer *buffer = createBuffer(500);
     if (!buffer)
         return NET_FAIL;
@@ -59,5 +68,8 @@ int rtmpSendOnplay(RtmpSession *session, HeaderChunk *header, int code, double t
 
 int rtmpSendOnstatus(RtmpSession *session, HeaderChunk *header, int code, double transactionId)
 {
+    if (!session || !header)
+        return NET_FAIL;
+        
     return NET_SUCCESS; 
 }

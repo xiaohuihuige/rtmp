@@ -44,9 +44,6 @@
 #define AUDIO_CHANNL 1
 #define VIDEO_CHANNL 0
 
-#define FILE_MEDIA  0
-#define LOCAL_MEDIA 1
-
 
 enum {
     NAL_UNIT_TYPE_UNSPECIFIED = 0,                    // Unspecified
@@ -251,33 +248,40 @@ typedef struct
 	double fractional_part;
 } AudioMedia;
 
+typedef VideoMedia *(*CreateH264Stream)(const char *file);
+typedef void (*DestroyH264Stream)(VideoMedia *media);
+typedef Buffer *(*GetH264Stream)(VideoMedia *media, int index);
+
+typedef AudioMedia *(*CreateAacStream)(const char *file);
+typedef void (*DestroyAacStream)(AudioMedia *meida);
+typedef Buffer *(*GetAacStream)(AudioMedia *media, int index);
+
+typedef struct 
+{
+    const char *app;
+    const char *h264_file;
+    const char *aac_file;
+
+	CreateH264Stream createH264Stream;
+	DestroyH264Stream destroyH264Stream;
+	GetH264Stream getH264Stream;
+	CreateAacStream createAacStream;
+	DestroyAacStream destroyAacStream;
+	GetAacStream getAacStream;
+} RtmpConfig;
+
 typedef struct 
 {
     char app[64];
     VideoMedia *video;
     AudioMedia *audio;
-
-	VideoMedia *(*createH264Stream)(void *args);
-	void (*destroyH264Stream)(VideoMedia *meida);
-	Buffer *(*getH264Stream)(VideoMedia *media,int index);
-
-	AudioMedia *(*createAacStream)(void *args);
-	void (*destroyAacStream)(AudioMedia *meida);
-	Buffer *(*getAacStream)(AudioMedia *media,int index);
+	RtmpConfig *config;
 } RtmpMedia;
 
 typedef struct 
 {
 	int time_base;
-   int index;
+   	int index;
 } MediaChannle;
-
-typedef struct 
-{
-	int type;
-    const char *app;
-    const char *h264_file;
-    const char *aac_file;
-} RtmpConfig;
 
 #endif

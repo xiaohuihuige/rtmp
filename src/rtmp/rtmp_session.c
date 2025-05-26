@@ -6,50 +6,53 @@
 #include "send_chunk.h"
 #include "rtmp_server.h"
 #include "amf0.h"
+#include "rtmp_publish.h"
 
 RtmpSession *createRtmpSession(Seesion *conn)
 {
-    RtmpSession *session = CALLOC(1, RtmpSession);
-    if (!session)  {
-        ERR("create session malloc error");
-        return NULL;
-    }
+    RtmpSession *session = NULL;
 
-    session->buffer = createBuffer(20 + RTMP_OUTPUT_CHUNK_SIZE);
-    if (!session->buffer) {
-        ERR("create buffer fail");
-        FREE(session);
-        return NULL;
-    }
+    do {
+        session = CALLOC(1, RtmpSession);
+        if (!session)  
+            break;
+
+        session->buffer = createBuffer(20 + RTMP_OUTPUT_CHUNK_SIZE);
+        if (!session->buffer)
+            break;
 
 
-    session->b = bs_new(session->buffer->data, session->buffer->length);
-    if (!session->b) {
-        ERR("create b bytes fail");
-        FREE(session->buffer);
-        FREE(session);
-        return NULL;
-    }
+        session->b = bs_new(session->buffer->data, session->buffer->length);
+        if (!session->b) 
+            break;
 
-    session->media          = NULL;
-    session->conn           = conn;
-    session->state          = RTMP_HANDSHAKE_UNINIT;
-    session->packet         = NULL;
-    session->video_task     = NULL;
-    session->audio_task     = NULL;
-    
-    session->channle[VIDEO_CHANNL].index = 0;
-    session->channle[AUDIO_CHANNL].index = 0;
-    session->channle[VIDEO_CHANNL].time_base = 1000;
-    session->channle[AUDIO_CHANNL].time_base = 1000;
+        session->media          = NULL;
+        session->conn           = conn;
+        session->state          = RTMP_HANDSHAKE_UNINIT;
+        session->packet         = NULL;
+        session->video_task     = NULL;
+        session->audio_task     = NULL;
+        
+        session->channle[VIDEO_CHANNL].index = 0;
+        session->channle[AUDIO_CHANNL].index = 0;
+        session->channle[VIDEO_CHANNL].time_base = 1000;
+        session->channle[AUDIO_CHANNL].time_base = 1000;
 
-    LOG("create rtmp session success %p", session);
+        LOG("create rtmp session success %p", session);
 
-    return session;
+        return session;
+    } while(0);
+
+    destroyRtmpSession(session);
+
+    return NULL;
 }
 
 void destroyRtmpSession(RtmpSession *session)
 {
+    if (!session)
+        return;
+
     LOG("destroy Rtmp Session %p", session);
     stopPushSessionstream(session);
     session->media = NULL;
@@ -61,7 +64,7 @@ void destroyRtmpSession(RtmpSession *session)
 
 static int _parseFirstChunkPacket(RtmpPacket *packet, Buffer *buffer)
 {
-    assert(buffer);
+    assert(packet || buffer);
 
     if (0 > readHeaderChunk(buffer, &packet->header))
         return NET_FAIL;
@@ -80,8 +83,6 @@ static int _parseFirstChunkPacket(RtmpPacket *packet, Buffer *buffer)
         buffer->index += residue + packet->header.header_len;
     }
 
-    //LOG("first packet, [%p, body length %d, index %d], [%p, revc buffer length %d, index %d], ", packet, packet->header.length, packet->index, buffer, buffer->length, buffer->index);
-    
     if (packet->index != packet->header.length) 
         return NET_FAIL;
 
@@ -94,9 +95,6 @@ static int _parseLastChunkPacket(RtmpPacket *packet, Buffer *buffer)
 
     int residue = packet->header.length - packet->index;
 
-    // LOG("last packet, [%p, body length %d, index %d], [%p revc buffer length %d, index %d]", 
-    //     packet, packet->header.length, packet->index, buffer, buffer->length, buffer->index);
-
     if (residue > 0) {
 
         int need_len = residue > (buffer->length - buffer->index) ? buffer->length - buffer->index : residue;
@@ -106,9 +104,6 @@ static int _parseLastChunkPacket(RtmpPacket *packet, Buffer *buffer)
         packet->index += need_len;
 
         buffer->index += need_len;
-
-        // LOG("end packet, [%p, body length %d, index %d], [%p, revc buffer length %d, index %d]", 
-        //     packet, packet->header.length, packet->index, buffer, buffer->length, buffer->index);
     }
 
     if (packet->index != packet->header.length) 
@@ -119,6 +114,8 @@ static int _parseLastChunkPacket(RtmpPacket *packet, Buffer *buffer)
 
 static int _incompleteRtmpChunk(RtmpSession *session, Buffer *buffer)
 {
+    assert(session || buffer);
+
     if (_parseLastChunkPacket(session->packet, buffer)) 
         return NET_FAIL;
 
@@ -131,6 +128,8 @@ static int _incompleteRtmpChunk(RtmpSession *session, Buffer *buffer)
 
 static int _completeRtmpChunk(RtmpSession *session, Buffer *buffer)
 {
+    assert(session || buffer);
+
     RtmpPacket *packet = CALLOC(1, RtmpPacket);
     if (!packet) 
         return NET_FAIL;
@@ -181,6 +180,8 @@ static void _parseRtmpPacket(RtmpSession *session, Buffer *buffer)
 
 static void _checkChunkComplete(Buffer *buffer)
 {
+    assert(buffer);
+
     int count = 0;
 
     for (int i = 0; i < buffer->length; i++)
@@ -194,7 +195,8 @@ static void _checkChunkComplete(Buffer *buffer)
 
 void recvRtmpSession(RtmpSession *session, Buffer *buffer)
 {
-    //LOG("recv size:%d, %p", buffer->length, session);
+    if (!session || !buffer)
+        return;
 
     _checkChunkComplete(buffer);
 

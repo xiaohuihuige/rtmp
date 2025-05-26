@@ -4,6 +4,8 @@
 
 static int _handleRtmpEvent(RtmpSession *session, bs_t *b)
 {
+    assert(session || b);
+    
     int event_type = bs_read_u(b, 16);
     if (event_type == SetBufferLength)
     {    
@@ -17,6 +19,8 @@ static int _handleRtmpEvent(RtmpSession *session, bs_t *b)
 
 static int _handleAcknowledgement(RtmpSession *session, bs_t *b)
 {
+    assert(session || b);
+
     int window_size  = bs_read_u(b, 32);
 
     LOG("window size %d", window_size);
@@ -26,6 +30,8 @@ static int _handleAcknowledgement(RtmpSession *session, bs_t *b)
 
 static int _handleSetChunkSize(RtmpSession *session, bs_t *b)
 {
+    assert(session || b);
+
     int chunk_size = bs_read_u(b, 32);
 
     LOG("chunk_size %d", chunk_size);
@@ -35,6 +41,8 @@ static int _handleSetChunkSize(RtmpSession *session, bs_t *b)
 
 static int _handleSetPeerBandwidth(RtmpSession *session, bs_t *b)
 {
+    assert(session || b);
+
     int window     = bs_read_u(b, 32);
     int limit_type = bs_read_u(b, 8);
     ERR("window %d, limit type %d", window, limit_type);
@@ -99,5 +107,8 @@ static int _handleEvent(RtmpSession *session, RtmpPacket *packet)
 
 int handleRtmpEvent(RtmpSession *session, RtmpPacket *packet)
 {
+    if (!session || !packet)
+        return NET_FAIL;
+
     return _handleEvent(session, packet);
 }

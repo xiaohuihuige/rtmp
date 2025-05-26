@@ -11,6 +11,8 @@ typedef struct
 
 static int _rtmpReadOnconnect(RtmpSession *session, bs_t *b)
 {
+    assert(session || b);
+
 	amf_object_item items;
 	amf_object_item commands[10];
 
@@ -83,6 +85,9 @@ handleInvokeCommand gHandleCommand[] = {
 
 int handleInvokeEvent(RtmpSession *session, bs_t *b, HeaderChunk *header)
 {
+    if (!session || !b || !header)
+        return NET_FAIL;
+
     double transactionId = -1;
     uint8_t command[256] = {0};
 
