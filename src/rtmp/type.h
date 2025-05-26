@@ -276,6 +276,11 @@ typedef struct
     VideoMedia *video;
     AudioMedia *audio;
 	RtmpConfig *config;
+
+	FifoQueue *sessions;
+	TaskScheduler *scher;
+	TaskTimer *vtimer;
+	TaskTimer *atimer;
 } RtmpMedia;
 
 typedef struct 

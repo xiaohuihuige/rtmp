@@ -17,25 +17,6 @@ static void _destroyRtmpSession(void *seesion)
     return destroyRtmpSession((RtmpSession *)seesion);
 }
 
-static void _closeMeidaStream(FifoQueue *stream)
-{
-    if (!stream)
-        return;
-
-    FifoQueue *task_node = NULL;
-    FifoQueue *temp_node = NULL;
-
-    list_for_each_entry_safe(task_node, temp_node, &stream->list, list)
-    {
-        if (task_node->task)
-            destroyRtmpMedia((RtmpMedia *)task_node->task);
-        task_node->task = NULL;
-
-        deleteFifoQueueTask(task_node, Seesion);
-    }
-    FREE(stream);  
-}
-
 RtmpServer *createRtmpServer(const char *ip, int port)
 {
     if (!ip)
@@ -61,7 +42,7 @@ RtmpServer *createRtmpServer(const char *ip, int port)
         setParentClassServer(rtmp->server, rtmp);
 
         return rtmp;
-        
+
     } while (0);
 
     destroyRtmpServer(rtmp);
@@ -76,8 +57,7 @@ void destroyRtmpServer(RtmpServer *rtmp)
 
     destroyTcpServer(rtmp->server);
 
-    _closeMeidaStream(rtmp->stream);
-    rtmp->stream = NULL;
+    destroyFifoQueueTask(rtmp->stream, RtmpMedia);
 
     FREE(rtmp);
 }

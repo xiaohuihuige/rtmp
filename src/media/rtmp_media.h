@@ -14,6 +14,10 @@ RtmpConfig *createFileRtmpConfig(const char *app, const char *h264_file, const c
 RtmpMedia *createRtmpMedia(RtmpConfig *config);
 void destroyRtmpMedia(RtmpMedia *media);
 
+int findRtmpMedia(RtmpSession *session);
+void addRtmpSessionToMedia(RtmpMedia *media, RtmpSession *session);
+void removeRtmpSession(RtmpMedia *media, RtmpSession *session);
+
 #endif // !__MEDIA_H__
 
 

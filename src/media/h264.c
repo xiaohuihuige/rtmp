@@ -125,8 +125,8 @@ void destroyH264Media(VideoMedia *media)
     if (!media)
         return;
 
-    if (media->queue)
-        destroyFifoQueue(media->queue, Buffer);
+
+    destroyFifoQueue(media->queue, Buffer);
 
     FREE(media->sps_buffer);
     FREE(media->pps_buffer); 

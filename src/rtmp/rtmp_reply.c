@@ -1,6 +1,6 @@
 #include "rtmp_reply.h"
 #include "control_message.h"
-#include "rtmp_publish.h"
+#include "rtmp_media.h"
 
 int rtmpSendConnect(RtmpSession *session, HeaderChunk *header, int code, double transactionId)
 {
@@ -61,7 +61,7 @@ int rtmpSendOnplay(RtmpSession *session, HeaderChunk *header, int code, double t
 
     FREE(buffer);
 
-    startPushSessionStream(session);
+    addRtmpSessionToMedia(session->media, session);
 
     return NET_SUCCESS; 
 }
@@ -70,6 +70,6 @@ int rtmpSendOnstatus(RtmpSession *session, HeaderChunk *header, int code, double
 {
     if (!session || !header)
         return NET_FAIL;
-        
+
     return NET_SUCCESS; 
 }

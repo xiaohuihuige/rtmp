@@ -4,6 +4,187 @@
 #include "aac.h"
 #include "h264.h"
 
+static int _sendVideoFrameToclient(RtmpMedia *media, RtmpSession *session)
+{
+    assert(media->config || media->config->getH264Stream);
+
+    Buffer *frame = media->config->getH264Stream(media->video, session->channle[VIDEO_CHANNL].index);
+    if (!frame) {
+        session->channle[VIDEO_CHANNL].index = 0;
+        frame = media->config->getH264Stream(media->video, session->channle[VIDEO_CHANNL].index);
+        if (!frame) 
+            return NET_SUCCESS;
+    }
+
+    if (NET_SUCCESS != sendFrameStream(session, frame, session->channle[VIDEO_CHANNL].time_base)) {
+        ERR("send video error");
+        return NET_FAIL;
+    }
+
+    session->channle[VIDEO_CHANNL].time_base += frame->timestamp;
+    session->channle[VIDEO_CHANNL].index++;
+
+    return frame->frame_type;
+}
+
+static int _sendAudioFrameToclient(RtmpMedia *media, RtmpSession *session)
+{
+    assert(media->config || media->config->getAacStream);
+
+    Buffer *frame = media->config->getAacStream(media->audio, session->channle[AUDIO_CHANNL].index);
+    if (!frame) {
+        session->channle[AUDIO_CHANNL].index = 0;
+        frame = media->config->getAacStream(media->audio, session->channle[AUDIO_CHANNL].index);
+        if (!frame)
+            return NET_SUCCESS;
+    }
+
+    if (NET_SUCCESS != sendAudioStream(session, frame, frame->timestamp)) {
+        ERR("send audio error");
+        return NET_FAIL;
+    }
+    
+    session->channle[AUDIO_CHANNL].index++;
+
+    return frame->frame_type;
+}
+
+static int _sendVideoFrameTimer(void *args)
+{
+    assert(args);
+
+    FifoQueue *task_node = NULL;
+    FifoQueue *temp_node = NULL;
+
+    list_for_each_entry_safe(task_node, temp_node, &((RtmpMedia *)args)->sessions->list, list)
+    {
+        if (!task_node || !task_node->task)
+            continue;
+
+        _sendVideoFrameToclient((RtmpMedia *)args, (RtmpSession *)task_node->task);
+    }
+
+    return NET_SUCCESS;
+}
+
+
+static int _sendAudioFrameTimer(void *args)
+{
+    assert(args);
+
+    FifoQueue *task_node = NULL;
+    FifoQueue *temp_node = NULL;
+
+    list_for_each_entry_safe(task_node, temp_node, &((RtmpMedia *)args)->sessions->list, list)
+    {
+        if (!task_node || !task_node->task)
+            continue;
+
+        _sendAudioFrameToclient((RtmpMedia *)args, (RtmpSession *)task_node->task);
+    }
+
+    return NET_SUCCESS;
+}
+
+
+static void _sendGopVideoFrameToclient(RtmpMedia *media, RtmpSession *session, int long_time)
+{
+    if (!session)
+        return;
+    
+    int base_time = 0;
+    int video_time = 0;
+    int audio_time = 0;
+
+    while (base_time <= long_time)
+    {
+        if (base_time <= video_time && (base_time + 10) > video_time && media->video)
+        {
+            _sendVideoFrameToclient(media, session);
+            video_time += media->video->duration;
+            continue;
+        }
+
+        if (base_time <= audio_time && (base_time + 10) > audio_time && media->audio)
+        {
+            _sendAudioFrameToclient(media, session);
+            audio_time += media->audio->duration;
+            continue;
+        }
+        base_time += 10;
+    }
+}
+
+static int _startPushSessionStream(RtmpMedia *media)
+{
+    if (!media)
+        return NET_FAIL;
+
+    if (media->video && media->video->queue) {
+        media->vtimer = addTimerTask(media->scher,  
+                                    media->video->duration,
+                                    media->video->duration, 
+                                    _sendVideoFrameTimer, (void *)media);
+        if (!media->vtimer)
+            return NET_FAIL;
+    }
+
+    if (media->audio && media->audio->queue) {
+        media->atimer = addTimerTask(media->scher, 
+                                    media->audio->duration, 
+                                    media->audio->duration, 
+                                    _sendAudioFrameTimer, (void *)media);
+        if (!media->atimer)
+            return NET_FAIL;
+    }
+    return NET_SUCCESS;
+}
+
+int findRtmpMedia(RtmpSession *session)
+{
+    if (!session)
+        return NET_FAIL;
+
+    session->media = findRtmpServerMedia((RtmpServer *)session->conn->tcps->parent, session->config.app);
+    if (!session->media) {
+        ERR("find rtmp stream error");
+        return NET_FAIL;
+    }
+
+    LOG("find stream %p, name %s", session->media, session->media->app);
+
+    return NET_SUCCESS;
+}
+
+static void _sendRtmpMediaGop(RtmpMedia *media, RtmpSession *session)
+{
+    if (media->video && media->video->avc_sequence)
+        sendVideoAVCStream(session, media->video->avc_sequence, session->channle[VIDEO_CHANNL].time_base);
+
+    if (media->audio && media->audio->adts_sequence)
+        sendAudioAdtsStream(session, media->audio->adts_sequence, session->channle[AUDIO_CHANNL].time_base);
+
+    _sendGopVideoFrameToclient(media, session, 6000);
+}
+
+void addRtmpSessionToMedia(RtmpMedia *media, RtmpSession *session)
+{
+    if (!media || !media->sessions || !session)
+        return;
+
+    _sendRtmpMediaGop(media, session);
+
+    enqueue(media->sessions, session); 
+}
+
+void removeRtmpSession(RtmpMedia *media, RtmpSession *session)
+{
+    if (!media || !media->sessions || !session)
+        return;
+
+    FindDeleteFifoQueueTask(media->sessions, RtmpSession, session);
+}
+
 RtmpConfig *createRtmpConfig(const char *app, const char *h264_file, const char *aac_file, 
                             CreateH264Stream createH264Stream, DestroyH264Stream destroyH264Stream,
                             GetH264Stream getH264Stream, CreateAacStream createAacStream, 
@@ -56,11 +237,26 @@ RtmpMedia *createRtmpMedia(RtmpConfig *config)
     if (config->createAacStream)
         media->audio = config->createAacStream(config->aac_file);
 
+    media->sessions = createFifiQueue();
+
+    media->scher = createTaskScheduler();
+
+    _startPushSessionStream(media);
+
     return media;
 }
 
 void destroyRtmpMedia(RtmpMedia *media)
 {
+    if (media->vtimer)
+        deleteTimerTask(media->vtimer);
+
+    if (media->atimer)
+        deleteTimerTask(media->atimer);
+
+    if (media->scher)
+        destroyTaskScheduler(media->scher);
+
     if (media->video && media->config && media->config->destroyH264Stream)
         media->config->destroyH264Stream(media->video);
 
@@ -69,6 +265,13 @@ void destroyRtmpMedia(RtmpMedia *media)
 
     FREE(media->config);
 
+    destroyFifoQueueTask(media->sessions, RtmpSession);
+
+    media->scher  = NULL;
+    media->atimer = NULL;
+    media->vtimer = NULL;
+    media->sessions = NULL;
+    
     media->audio  = NULL;
     media->video  = NULL;
     media->config = NULL;

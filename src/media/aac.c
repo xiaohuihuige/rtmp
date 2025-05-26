@@ -117,13 +117,9 @@ AudioMedia *createAacMedia(const char *file)
 
     } while (0);
 
-    if (media->queue)
-        destroyFifoQueue(media->queue, Buffer);
-
-    FREE(buffer);
-
-    FREE(media);
-
+   
+    destroyAacMedia(media);
+    
     return NULL;
 }
 
@@ -132,8 +128,7 @@ void destroyAacMedia(AudioMedia *media)
     if (!media)
         return;
 
-    if (media->queue)
-        destroyFifoQueue(media->queue, Buffer);
+    destroyFifoQueue(media->queue, Buffer);
     FREE(media->adts_sequence);
     FREE(media);
 }

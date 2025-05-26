@@ -6,7 +6,6 @@
 #include "send_chunk.h"
 #include "rtmp_server.h"
 #include "amf0.h"
-#include "rtmp_publish.h"
 
 RtmpSession *createRtmpSession(Seesion *conn)
 {
@@ -30,9 +29,7 @@ RtmpSession *createRtmpSession(Seesion *conn)
         session->conn           = conn;
         session->state          = RTMP_HANDSHAKE_UNINIT;
         session->packet         = NULL;
-        session->video_task     = NULL;
-        session->audio_task     = NULL;
-        
+
         session->channle[VIDEO_CHANNL].index = 0;
         session->channle[AUDIO_CHANNL].index = 0;
         session->channle[VIDEO_CHANNL].time_base = 1000;
@@ -54,7 +51,8 @@ void destroyRtmpSession(RtmpSession *session)
         return;
 
     LOG("destroy Rtmp Session %p", session);
-    stopPushSessionstream(session);
+
+    removeRtmpSession(session->media, session);
     session->media = NULL;
     FREE(session->buffer);
     FREE(session->b);

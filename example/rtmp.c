@@ -77,7 +77,7 @@ int main()
     RtmpServer * rtmp = createRtmpServer(DEFAULT_IP, 3000);
 
     RtmpMedia *app_media = createRtmpMedia(createFileRtmpConfig("app", "./resources/test.h264", "./resources/suiyueruge.aac"));
-    RtmpMedia *light_media = createRtmpMedia(createFileRtmpConfig("light", NULL, "./resources/light.aac"));
+    RtmpMedia *light_media = createRtmpMedia(createFileRtmpConfig("light", "./resources/light.h264", NULL));
 
     addRtmpServerMedia(rtmp, app_media);
     addRtmpServerMedia(rtmp, light_media);
@@ -85,6 +85,9 @@ int main()
     while (keep_running) {
         sleep(1);
     }
+    
+    destroyRtmpMedia(app_media);
+    destroyRtmpMedia(light_media);
 
     destroyRtmpServer(rtmp);
 }

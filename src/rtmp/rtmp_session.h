@@ -12,8 +12,6 @@ typedef struct
    Seesion *conn;
    RtmpPacket *packet;
    SessionConfig config;
-   TaskTimer *video_task;
-   TaskTimer *audio_task;
    Buffer *buffer;
    bs_t *b;
    RtmpMedia *media;
