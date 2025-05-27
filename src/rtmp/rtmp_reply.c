@@ -19,7 +19,7 @@ int rtmpSendConnect(RtmpSession *session, HeaderChunk *header, int code, double 
 
     sendConnectResult(session, buffer, transactionId);
 
-    findRtmpMedia(session);
+    findRtmpMediaStream(session);
 
     FREE(buffer);
 

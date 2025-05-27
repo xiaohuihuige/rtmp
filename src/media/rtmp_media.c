@@ -4,14 +4,16 @@
 #include "aac.h"
 #include "h264.h"
 
-static int _sendVideoFrameToclient(RtmpMedia *media, RtmpSession *session)
+static int _sendVideoFrameToclient(void *args)
 {
-    assert(media->config || media->config->getH264Stream);
+    assert(args);
 
-    Buffer *frame = media->config->getH264Stream(media->video, session->channle[VIDEO_CHANNL].index);
+    RtmpSession *session = (RtmpSession *)args;
+
+    Buffer *frame = session->media->config->getH264Stream(session->media->video, session->channle[VIDEO_CHANNL].index);
     if (!frame) {
         session->channle[VIDEO_CHANNL].index = 0;
-        frame = media->config->getH264Stream(media->video, session->channle[VIDEO_CHANNL].index);
+        frame = session->media->config->getH264Stream(session->media->video, session->channle[VIDEO_CHANNL].index);
         if (!frame) 
             return NET_SUCCESS;
     }
@@ -27,14 +29,16 @@ static int _sendVideoFrameToclient(RtmpMedia *media, RtmpSession *session)
     return frame->frame_type;
 }
 
-static int _sendAudioFrameToclient(RtmpMedia *media, RtmpSession *session)
+static int _sendAudioFrameToclient(void *args)
 {
-    assert(media->config || media->config->getAacStream);
+    assert(args);
 
-    Buffer *frame = media->config->getAacStream(media->audio, session->channle[AUDIO_CHANNL].index);
+    RtmpSession *session = (RtmpSession *)args;
+
+    Buffer *frame = session->media->config->getAacStream(session->media->audio, session->channle[AUDIO_CHANNL].index);
     if (!frame) {
         session->channle[AUDIO_CHANNL].index = 0;
-        frame = media->config->getAacStream(media->audio, session->channle[AUDIO_CHANNL].index);
+        frame = session->media->config->getAacStream(session->media->audio, session->channle[AUDIO_CHANNL].index);
         if (!frame)
             return NET_SUCCESS;
     }
@@ -61,7 +65,9 @@ static int _sendVideoFrameTimer(void *args)
         if (!task_node || !task_node->task)
             continue;
 
-        _sendVideoFrameToclient((RtmpMedia *)args, (RtmpSession *)task_node->task);
+        RtmpSession *session = (RtmpSession *)task_node->task;
+
+        addTriggerTask(session->conn->tcps->scher, _sendVideoFrameToclient, (void *)session, 0);
     }
 
     return NET_SUCCESS;
@@ -80,7 +86,9 @@ static int _sendAudioFrameTimer(void *args)
         if (!task_node || !task_node->task)
             continue;
 
-        _sendAudioFrameToclient((RtmpMedia *)args, (RtmpSession *)task_node->task);
+        RtmpSession *session = (RtmpSession *)task_node->task;
+
+        addTriggerTask(session->conn->tcps->scher, _sendAudioFrameToclient, (void *)session, 0);
     }
 
     return NET_SUCCESS;
@@ -100,14 +108,14 @@ static void _sendGopVideoFrameToclient(RtmpMedia *media, RtmpSession *session, i
     {
         if (base_time <= video_time && (base_time + 10) > video_time && media->video)
         {
-            _sendVideoFrameToclient(media, session);
+            _sendVideoFrameToclient(session);
             video_time += media->video->duration;
             continue;
         }
 
         if (base_time <= audio_time && (base_time + 10) > audio_time && media->audio)
         {
-            _sendAudioFrameToclient(media, session);
+            _sendAudioFrameToclient(session);
             audio_time += media->audio->duration;
             continue;
         }
@@ -140,7 +148,7 @@ static int _startPushSessionStream(RtmpMedia *media)
     return NET_SUCCESS;
 }
 
-int findRtmpMedia(RtmpSession *session)
+int findRtmpMediaStream(RtmpSession *session)
 {
     if (!session)
         return NET_FAIL;
@@ -177,7 +185,7 @@ void addRtmpSessionToMedia(RtmpMedia *media, RtmpSession *session)
     enqueue(media->sessions, session); 
 }
 
-void removeRtmpSession(RtmpMedia *media, RtmpSession *session)
+void removeRtmpSessionFromMedia(RtmpMedia *media, RtmpSession *session)
 {
     if (!media || !media->sessions || !session)
         return;
@@ -231,23 +239,39 @@ RtmpMedia *createRtmpMedia(RtmpConfig *config)
 
     media->config = config;
 
-    if (config->createH264Stream)
-        media->video = config->createH264Stream(config->h264_file);
+    do {
+        if (config->createH264Stream)
+            media->video = config->createH264Stream(config->h264_file);
 
-    if (config->createAacStream)
-        media->audio = config->createAacStream(config->aac_file);
+        if (config->createAacStream)
+            media->audio = config->createAacStream(config->aac_file);
 
-    media->sessions = createFifiQueue();
+        media->sessions = createFifiQueue();
+        if (!media->sessions)
+            break;
 
-    media->scher = createTaskScheduler();
+        media->scher = createTaskScheduler();
+        if (!media->scher)
+            break;
 
-    _startPushSessionStream(media);
+        if (_startPushSessionStream(media))
+            break;
 
-    return media;
+        return media;
+
+    } while(0);
+
+
+    destroyRtmpMedia(media);
+
+    return NULL;
 }
 
 void destroyRtmpMedia(RtmpMedia *media)
 {
+    if (!media)
+        return;
+
     if (media->vtimer)
         deleteTimerTask(media->vtimer);
 

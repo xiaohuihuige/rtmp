@@ -1,7 +1,7 @@
 #include "control_message.h"
 #include "rtmp_session.h"
 #include "type.h"
-#include "amf0.h"
+#include <schedule/amf0.h>
 #include "send_chunk.h"
 
 static void _buildPeerBandwidth(bs_t *b, uint32_t window_size, uint8_t limit_type);

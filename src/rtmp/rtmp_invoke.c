@@ -1,5 +1,5 @@
 #include "rtmp_invoke.h"
-#include "amf0.h"
+#include <schedule/amf0.h>
 #include "rtmp_reply.h"
 
 typedef struct

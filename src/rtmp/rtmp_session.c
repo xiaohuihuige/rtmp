@@ -5,7 +5,7 @@
 #include "rtmp_event.h"
 #include "send_chunk.h"
 #include "rtmp_server.h"
-#include "amf0.h"
+#include <schedule/amf0.h>
 
 RtmpSession *createRtmpSession(Seesion *conn)
 {
@@ -52,7 +52,7 @@ void destroyRtmpSession(RtmpSession *session)
 
     LOG("destroy Rtmp Session %p", session);
 
-    removeRtmpSession(session->media, session);
+    removeRtmpSessionFromMedia(session->media, session);
     session->media = NULL;
     FREE(session->buffer);
     FREE(session->b);
