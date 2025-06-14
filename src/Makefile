@@ -1,4 +1,3 @@
-
 OBJ_FILE = $(wildcard $(OBJ_DIR)/*.o)
 
 .PHONY: all subdir static_lib dynamic_lib

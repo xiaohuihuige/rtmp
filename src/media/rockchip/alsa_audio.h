@@ -4,7 +4,7 @@
 #include <schedule/net-common.h>
 #include "type.h"
 
-AudioMedia *createAlsaAacMedia(const char *file);
+AudioMedia *createAlsaAacMedia(const char *device_name);
 void destroyAlsaAacMedia(AudioMedia *media);
 Buffer *getAlsaAacMediaFrame(AudioMedia *media, int index);
 

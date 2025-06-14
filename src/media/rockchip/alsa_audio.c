@@ -6,10 +6,6 @@ AudioMedia *createAlsaAacMedia(const char *file)
     // if (!media)
     //     return NULL;
 
-    // media->queue = createFifiQueue();
-    // if (!media->queue)
-    //     return NULL;
-
     // media->adts_sequence = rtmpadtsSequence(header.profile, header.samplingFreqIndex, 1, header.channelCfg);
     // if (!media->adts_sequence)
     //     return NULL;

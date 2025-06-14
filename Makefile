@@ -1,21 +1,13 @@
-CURRENT_DIR = $(shell pwd)
-OUT_DIR     = $(CURRENT_DIR)/out
-OBJ_DIR     = $(OUT_DIR)/obj
-RTMP_DIR    = $(CURRENT_DIR)/src/rtmp
-MEDIA_DIR   = $(CURRENT_DIR)/src/media
-BIN_DIR     = $(OUT_DIR)/bin
-INCLUDE_DIR = $(OUT_DIR)/include
-LIB_DIR     = $(OUT_DIR)/lib
-SRC_DIR     = $(CURRENT_DIR)/src
-
-STATIC_NAME  = $(LIB_DIR)/librtmp.a
-DYNAMIC_NAME = $(LIB_DIR)/librtmp.so
+include config.mk
 
 OBJ_FILE = $(wildcard $(OBJ_DIR)/*.o)
 
 EXECUTABLES = $(patsubst example/%.c, $(BIN_DIR)/%, $(wildcard example/*.c))
 
-CFLAGS = -I$(RTMP_DIR)  -I$(MEDIA_DIR) -lschedule  -lpthread -lrt -Wall -fPIC -g  -lasound
+SUBDIRS = $(shell find $(SRC_DIR) -type d)
+INCLUDE_PATHS = $(addprefix -I, $(SUBDIRS))
+
+CFLAGS = $(INCLUDE_PATHS) -lschedule  -lpthread -lrt -Wall -fPIC -g -lasound -losal -lrockchip_mpp
 
 .PHONY: all clean subdir TEMP_PATH
 

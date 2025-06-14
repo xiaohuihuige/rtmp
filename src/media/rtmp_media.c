@@ -60,7 +60,13 @@ static int _sendVideoFrameTimer(void *args)
     FifoQueue *task_node = NULL;
     FifoQueue *temp_node = NULL;
 
-    list_for_each_entry_safe(task_node, temp_node, &((RtmpMedia *)args)->sessions->list, list)
+    RtmpMedia *media = (RtmpMedia *)args;
+
+    Buffer *frame = media->config->getH264Stream(media->video, 0);
+    if (!frame)
+        return NET_FAIL;
+    
+    list_for_each_entry_safe(task_node, temp_node, &media->sessions->list, list)
     {
         if (!task_node || !task_node->task)
             continue;
