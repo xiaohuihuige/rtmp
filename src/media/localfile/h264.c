@@ -10,11 +10,13 @@ static void _paserNaluPacket(VideoMedia *media, uint8_t *data, int size, int typ
     if (!media->queue || !data)
         return;
 
-    if (type == NAL_UNIT_TYPE_SPS && !media->sps_buffer) {
-        media->sps_buffer = createFrameBuffer(data, size, type, 0);
+    if (type == NAL_UNIT_TYPE_SPS) {
+        if (!media->sps_buffer)
+            media->sps_buffer = createFrameBuffer(data, size, type, 0);
         return;
-    } else if (type == NAL_UNIT_TYPE_PPS && !media->pps_buffer) {
-        media->pps_buffer = createFrameBuffer(data, size, type, 0);
+    } else if (type == NAL_UNIT_TYPE_PPS) {
+        if(!media->pps_buffer)
+            media->pps_buffer = createFrameBuffer(data, size, type, 0);
         return;
     } else if (type == NAL_UNIT_TYPE_SEI) {
         return;
@@ -42,7 +44,10 @@ static void _paserNaluPacket(VideoMedia *media, uint8_t *data, int size, int typ
         FREE(sps);
     }
 
-    enqueue(media->queue, rtmpWriteVideoFrame(data, size, type, calculateTimeStamp(&media->fractional_part, media->fps, 1)));
+    Buffer *buffer = rtmpWriteVideoFrame(data, size, type, 
+                                    calculateTimeStamp(&media->fractional_part, media->fps, 1));
+
+    enqueue(media->queue, buffer);
 }
 
 static int _runMediaStream(VideoMedia *media, Buffer *buffer)
@@ -124,7 +129,6 @@ void destroyH264Media(VideoMedia *media)
 {
     if (!media)
         return;
-
 
     destroyFifoQueue(media->queue, Buffer);
 

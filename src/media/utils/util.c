@@ -35,7 +35,6 @@ void printfRtmpAddr(int port, const char *app)
     LOG("play rtmp address 【rtmp://%s:%d/%s】", play_ip, port, app);
 }
 
-
 uint32_t calculateTimeStamp(double *fractional_part, int fps, int sample_number)
 {
     if (!fps)
