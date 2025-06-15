@@ -11,6 +11,5 @@ dynamic_lib:
 	$(CC) -shared -o $(DYNAMIC_NAME) $(OBJ_FILE)
 
 subdir:
-	$(MAKE) -C $(RTMP_DIR)  CFLAGS="$(CFLAGS)" OBJ_DIR=$(OBJ_DIR)
-	$(MAKE) -C $(MEDIA_DIR) CFLAGS="$(CFLAGS)" OBJ_DIR=$(OBJ_DIR)
-
+	$(MAKE) -C $(RTMP_DIR)  CFLAGS="$(CFLAGS)" OBJ_DIR=$(OBJ_DIR) CC=$(CC) AR=$(AR)
+	$(MAKE) -C $(MEDIA_DIR) CFLAGS="$(CFLAGS)" OBJ_DIR=$(OBJ_DIR) CC=$(CC) AR=$(AR)

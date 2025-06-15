@@ -7,7 +7,7 @@ EXECUTABLES = $(patsubst example/%.c, $(BIN_DIR)/%, $(wildcard example/*.c))
 SUBDIRS = $(shell find $(SRC_DIR) -type d)
 INCLUDE_PATHS = $(addprefix -I, $(SUBDIRS))
 
-CFLAGS = $(INCLUDE_PATHS) -lschedule  -lpthread -lrt -Wall -fPIC -g -lasound -losal -lrockchip_mpp
+CFLAGS += $(INCLUDE_PATHS) -lschedule  -lpthread -lrt -Wall -fPIC -g
 
 .PHONY: all clean subdir TEMP_PATH
 
@@ -36,7 +36,7 @@ $(BIN_DIR)/%: example/%.c | TEMP_PATH
 subdir:
 	$(MAKE) -C $(SRC_DIR) CFLAGS="$(CFLAGS)" \
 		OBJ_DIR=$(OBJ_DIR) RTMP_DIR=$(RTMP_DIR)  MEDIA_DIR=$(MEDIA_DIR)\
-		STATIC_NAME=$(STATIC_NAME) DYNAMIC_NAME=$(DYNAMIC_NAME) 
+		STATIC_NAME=$(STATIC_NAME) DYNAMIC_NAME=$(DYNAMIC_NAME) CC=$(CC) AR=$(AR) 
 	find $(SRC_DIR) -name "*.h" -exec cp {} $(INCLUDE_DIR) \;
 
 clean:
@@ -47,6 +47,3 @@ install:
 	-cp $(BIN_DIR)/*      /usr/local/bin/
 	-cp $(INCLUDE_DIR)/*  /usr/local/include
 	-ldconfig
-
-
-

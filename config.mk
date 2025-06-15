@@ -10,3 +10,7 @@ SRC_DIR     = $(CURRENT_DIR)/src
 
 STATIC_NAME  = $(LIB_DIR)/librtmp.a
 DYNAMIC_NAME = $(LIB_DIR)/librtmp.so
+
+CC :=gcc
+AR :=ar
+CFLAGS =

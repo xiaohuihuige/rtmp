@@ -9,5 +9,5 @@ $(OBJ_DIR)/%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 subdir:
-	$(MAKE) -C ./localfile  CFLAGS="$(CFLAGS)" OBJ_DIR=$(OBJ_DIR)
-	$(MAKE) -C ./rockchip   CFLAGS="$(CFLAGS)" OBJ_DIR=$(OBJ_DIR)
+	$(MAKE) -C ./localfile  CFLAGS="$(CFLAGS)" OBJ_DIR=$(OBJ_DIR) CC=$(CC) AR=$(AR)
+#	$(MAKE) -C ./rockchip   CFLAGS="$(CFLAGS)" OBJ_DIR=$(OBJ_DIR) CC=$(CC) AR=$(AR)
