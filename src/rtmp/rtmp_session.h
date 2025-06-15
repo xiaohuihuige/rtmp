@@ -16,6 +16,7 @@ typedef struct
    bs_t *b;
    RtmpMedia *media;
    MediaChannle channle[2];
+   Mutex myMutex;
 } RtmpSession;
 
 RtmpSession *createRtmpSession(Seesion *conn);

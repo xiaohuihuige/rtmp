@@ -22,13 +22,13 @@ RtmpServer *createRtmpServer(const char *ip, int port)
     if (!ip)
         return NULL;
 
-    RtmpServer *rtmp = NULL;
-    
-    do {
-        rtmp = CALLOC(1, RtmpServer);
-        if (!rtmp )
-            break;
+    RtmpServer *rtmp = CALLOC(1, RtmpServer);
+    if (!rtmp)
+        return NULL;
 
+    MUTEX_INIT(&rtmp->myMutex);
+
+    do {
         rtmp->stream = createFifiQueue();
         if (!rtmp->stream)
             break;
@@ -57,8 +57,14 @@ void destroyRtmpServer(RtmpServer *rtmp)
 
     destroyTcpServer(rtmp->server);
 
+    MUTEX_LOCK(&rtmp->myMutex);
     destroyFifoQueueTask(rtmp->stream, RtmpMedia);
+    MUTEX_UNLOCK(&rtmp->myMutex);
 
+    MUTEX_DESTROY(&rtmp->myMutex);
+    
+    rtmp->server = NULL;
+    rtmp->stream = NULL;
     FREE(rtmp);
 }
 
@@ -69,7 +75,9 @@ void addRtmpServerMedia(RtmpServer *rtmp, RtmpMedia *media)
 
     printfRtmpAddr(rtmp->server->port, media->app);
 
-    enqueue(rtmp->stream, media); 
+    MUTEX_LOCK(&rtmp->myMutex);
+    enqueue(rtmp->stream, media);
+    MUTEX_UNLOCK(&rtmp->myMutex);
 }
 
 RtmpMedia *findRtmpServerMedia(RtmpServer *rtmp, const char *app)
@@ -77,12 +85,17 @@ RtmpMedia *findRtmpServerMedia(RtmpServer *rtmp, const char *app)
     if (!rtmp || !app)
         return NULL;
 
+    MUTEX_LOCK(&rtmp->myMutex);
     FifoQueue *task_node = NULL;
     FifoQueue *temp_node = NULL;
     list_for_each_entry_safe(task_node, temp_node, &rtmp->stream->list, list) {
         RtmpMedia *media = (RtmpMedia *)task_node->task;
         if (!strncmp(media->app, app, strlen(app)) ) 
+        {
+            MUTEX_UNLOCK(&rtmp->myMutex);
             return media;
+        }
     }
+    MUTEX_UNLOCK(&rtmp->myMutex);
     return NULL;
 }

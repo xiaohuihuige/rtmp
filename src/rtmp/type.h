@@ -281,6 +281,7 @@ typedef struct
 	TaskScheduler *scher;
 	TaskTimer *vtimer;
 	TaskTimer *atimer;
+	Mutex myMutex;
 } RtmpMedia;
 
 typedef struct 

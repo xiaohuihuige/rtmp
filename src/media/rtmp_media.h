@@ -8,15 +8,11 @@
 #include "type.h"
 #include "util.h"
 
-
-RtmpConfig *createFileRtmpConfig(const char *app, const char *h264_file, const char *aac_file);
-
 RtmpMedia *createRtmpMedia(RtmpConfig *config);
 void destroyRtmpMedia(RtmpMedia *media);
 
-int findRtmpMediaStream(RtmpSession *session);
 void addRtmpSessionToMedia(RtmpMedia *media, RtmpSession *session);
-void removeRtmpSessionFromMedia(RtmpMedia *media, RtmpSession *session);
+void deleteRtmpSessionToMedia(RtmpMedia *media, RtmpSession *session);
 
 #endif // !__MEDIA_H__
 

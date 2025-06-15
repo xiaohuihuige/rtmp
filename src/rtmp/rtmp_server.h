@@ -9,11 +9,14 @@ typedef struct
 {
    TcpServer *server;
    FifoQueue *stream;
+   Mutex myMutex;
 } RtmpServer;
 
 RtmpServer *createRtmpServer(const char *ip, int port);
 void destroyRtmpServer(RtmpServer *rtmp);
+
 void addRtmpServerMedia(RtmpServer *rtmp, RtmpMedia *media);
+void deleteRtmpServerMedia(RtmpServer *rtmp, RtmpMedia *media);
 RtmpMedia *findRtmpServerMedia(RtmpServer *rtmp, const char *app);
 
 #endif

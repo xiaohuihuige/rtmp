@@ -4,23 +4,27 @@
 #include <schedule/amf0.h>
 #include "send_chunk.h"
 
-static void _buildPeerBandwidth(bs_t *b, uint32_t window_size, uint8_t limit_type);
-static void _buildSetChunkSize(bs_t *b, int chunk_size);
+#define MESSAGE_RESULT "_result"
+#define MESSAGE_ERROR  "_error"
+
 void _buildSetAbort(bs_t *b, uint32_t chunk_streamid);
 void _buildSetAcknowledgement(bs_t *b, uint32_t sequence_number);
-static void _buildWindowAcknowledgementSize(bs_t *b, uint32_t window_size);
-static void _buildSetStreamBegin(bs_t *b, uint32_t streamId);
 void _buildSetStreamEof(bs_t *b, uint32_t streamId);
 void _buildStreamDry(bs_t *b, uint32_t streamId);
 void _buildSetBufferLength(bs_t *b, uint32_t streamId, uint32_t ms);
 void _buildSetStreamIsRecord(bs_t *b, uint32_t streamId);
 void _buildSetPing(bs_t *b, uint32_t timstamp);
 void _buildSetPong(bs_t *b, uint32_t timstamp);
+void _buildStreamIsRecord(bs_t *b, uint32_t streamId);
+
+static void _buildStreamRespond(bs_t *b, const char *result, double transactionId, double stream_id);
+static void _buildPeerBandwidth(bs_t *b, uint32_t window_size, uint8_t limit_type);
+static void _buildSetChunkSize(bs_t *b, int chunk_size);
+static void _buildWindowAcknowledgementSize(bs_t *b, uint32_t window_size);
+static void _buildSetStreamBegin(bs_t *b, uint32_t streamId);
 static void _buildConnectResult(bs_t *b, double transactionId, const char* fmsver, double capabilities, const char* code, const char* level, const char* description, double encoding);
-static void _buildCreateStreanResult(bs_t *b, double transactionId, double stream_id);
 static void _buildWriteOnstatus(bs_t *b,  double transactionId, const char* level, const char* code, const char* description);
 static void _buildSampleAccess(bs_t *b,  double stream_id, const char *sample_access);
-void _buildStreamIsRecord(bs_t *b, uint32_t streamId);
 static void _buildOnMetaData(bs_t *b, RtmpMedia *media);
 
 static void _buildPeerBandwidth(bs_t *b, uint32_t window_size, uint8_t limit_type)
@@ -298,11 +302,14 @@ static void _buildConnectResult(bs_t *b,
 	amf_write_objectEnd(b);
 }
 
-static void _buildCreateStreanResult(bs_t *b, double transactionId, double stream_id)
+static void _buildStreamRespond(bs_t *b, const char *result, double transactionId, double stream_id)
 {
     assert(b);
 
-    int length = AMF_STRING_LENGTH("_result")  + AMF_DOUBLE_LENGTH + AMF_NULL_LENGTH + AMF_DOUBLE_LENGTH;
+    int length = AMF_STRING_LENGTH(result) 
+                + AMF_DOUBLE_LENGTH
+                + AMF_NULL_LENGTH 
+                + AMF_DOUBLE_LENGTH;
 
     HeaderChunk header = {
         .fmt = RTMP_CHUNK_TYPE_0,
@@ -315,10 +322,10 @@ static void _buildCreateStreanResult(bs_t *b, double transactionId, double strea
 
     writeChunkHeader(b, &header);
 
-    amf_write_string(b, "_result", strlen("_result"));
-	amf_write_double(b, transactionId);
-	amf_write_null(b);
-	amf_write_double(b, stream_id);
+    amf_write_string(b, result, strlen(result));
+    amf_write_double(b, transactionId);
+    amf_write_null(b);
+    amf_write_double(b, stream_id);
 }
 
 static void _buildWriteOnstatus(bs_t *b,  double transactionId, const char* level, const char* code, const char* description)
@@ -535,7 +542,6 @@ int sendConnectResult(RtmpSession *session, Buffer *buffer, double transactionId
     return NET_SUCCESS;
 }
 
-
 int sendCreateStreamResult(RtmpSession *session, Buffer *buffer, double transactionId, uint32_t stream_id)
 {
     if (!session || !buffer)
@@ -545,14 +551,32 @@ int sendCreateStreamResult(RtmpSession *session, Buffer *buffer, double transact
     if (!b) 
         return NET_FAIL;
 
-    _buildCreateStreanResult(b, transactionId, stream_id);
+    _buildStreamRespond(b, MESSAGE_RESULT, transactionId, stream_id);
 
     sendToClient(session, buffer->data, bs_pos(b));
 
     FREE(b);
 
     return NET_SUCCESS;
-} 
+}
+
+int sendStreamError(RtmpSession *session, Buffer *buffer, double transactionId, uint32_t stream_id)
+{
+    if (!session || !buffer)
+        return NET_FAIL;
+
+    bs_t *b = bs_new(buffer->data, buffer->length);
+    if (!b)
+        return NET_FAIL;
+
+    _buildStreamRespond(b, MESSAGE_ERROR, transactionId, stream_id);
+
+    sendToClient(session, buffer->data, bs_pos(b));
+
+    FREE(b);
+
+    return NET_SUCCESS;
+}
 
 int sendSetStreamBegin(RtmpSession *session, Buffer *buffer, uint32_t stream_id)
 {

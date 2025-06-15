@@ -12,5 +12,6 @@ int sendSetStreamBegin(RtmpSession *session, Buffer *buffer, uint32_t stream_id)
 int sendOnMetaData(RtmpSession *session, Buffer *buffer);
 int sendSampleAccess(RtmpSession *session, Buffer *buffer, uint32_t stream_id);
 int sendOnstatus(RtmpSession *session, Buffer *buffer, double transactionId, const char *app);
+int sendStreamError(RtmpSession *session, Buffer *buffer, double transactionId, uint32_t stream_id);
 
 #endif // !__CONTRLOL_MESSAGES__H_

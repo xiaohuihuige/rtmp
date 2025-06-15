@@ -1,14 +1,10 @@
 #include "rtmp_media.h"
 #include "send_chunk.h"
 #include "rtmp_server.h"
-#include "aac.h"
-#include "h264.h"
 
-static int _sendVideoFrameToclient(void *args)
+static int _sendVideoFrameToclient(RtmpSession *session)
 {
-    assert(args);
-
-    RtmpSession *session = (RtmpSession *)args;
+    assert(session);
 
     Buffer *frame = session->media->config->getH264Stream(session->media->video, session->channle[VIDEO_CHANNL].index);
     if (!frame) {
@@ -29,11 +25,9 @@ static int _sendVideoFrameToclient(void *args)
     return frame->frame_type;
 }
 
-static int _sendAudioFrameToclient(void *args)
+static int _sendAudioFrameToclient(RtmpSession *session)
 {
-    assert(args);
-
-    RtmpSession *session = (RtmpSession *)args;
+    assert(session);
 
     Buffer *frame = session->media->config->getAacStream(session->media->audio, session->channle[AUDIO_CHANNL].index);
     if (!frame) {
@@ -59,26 +53,19 @@ static int _sendVideoFrameTimer(void *args)
 
     FifoQueue *task_node = NULL;
     FifoQueue *temp_node = NULL;
-
     RtmpMedia *media = (RtmpMedia *)args;
 
-    Buffer *frame = media->config->getH264Stream(media->video, 0);
-    if (!frame)
-        return NET_FAIL;
-    
+    MUTEX_LOCK(&media->myMutex);
     list_for_each_entry_safe(task_node, temp_node, &media->sessions->list, list)
     {
         if (!task_node || !task_node->task)
             continue;
-
-        RtmpSession *session = (RtmpSession *)task_node->task;
-
-        addTriggerTask(session->conn->tcps->scher, _sendVideoFrameToclient, (void *)session, 0);
+        _sendVideoFrameToclient((RtmpSession *)task_node->task);
     }
+    MUTEX_UNLOCK(&media->myMutex);
 
     return NET_SUCCESS;
 }
-
 
 static int _sendAudioFrameTimer(void *args)
 {
@@ -86,17 +73,16 @@ static int _sendAudioFrameTimer(void *args)
 
     FifoQueue *task_node = NULL;
     FifoQueue *temp_node = NULL;
+    RtmpMedia *media = (RtmpMedia *)args;
 
-    list_for_each_entry_safe(task_node, temp_node, &((RtmpMedia *)args)->sessions->list, list)
+    MUTEX_LOCK(&media->myMutex);
+    list_for_each_entry_safe(task_node, temp_node, &media->sessions->list, list)
     {
         if (!task_node || !task_node->task)
             continue;
-
-        RtmpSession *session = (RtmpSession *)task_node->task;
-
-        addTriggerTask(session->conn->tcps->scher, _sendAudioFrameToclient, (void *)session, 0);
+        _sendAudioFrameToclient((RtmpSession *)task_node->task);
     }
-
+    MUTEX_UNLOCK(&media->myMutex);
     return NET_SUCCESS;
 }
 
@@ -154,22 +140,6 @@ static int _startPushSessionStream(RtmpMedia *media)
     return NET_SUCCESS;
 }
 
-int findRtmpMediaStream(RtmpSession *session)
-{
-    if (!session)
-        return NET_FAIL;
-
-    session->media = findRtmpServerMedia((RtmpServer *)session->conn->tcps->parent, session->config.app);
-    if (!session->media) {
-        ERR("find rtmp stream error");
-        return NET_FAIL;
-    }
-
-    LOG("find stream %p, name %s", session->media, session->media->app);
-
-    return NET_SUCCESS;
-}
-
 static void _sendRtmpMediaGop(RtmpMedia *media, RtmpSession *session)
 {
     if (media->video && media->video->avc_sequence)
@@ -188,48 +158,19 @@ void addRtmpSessionToMedia(RtmpMedia *media, RtmpSession *session)
 
     _sendRtmpMediaGop(media, session);
 
-    enqueue(media->sessions, session); 
+    MUTEX_LOCK(&media->myMutex);
+    enqueue(media->sessions, session);
+    MUTEX_UNLOCK(&media->myMutex);
 }
 
-void removeRtmpSessionFromMedia(RtmpMedia *media, RtmpSession *session)
+void deleteRtmpSessionToMedia(RtmpMedia *media, RtmpSession *session)
 {
     if (!media || !media->sessions || !session)
         return;
 
+    MUTEX_LOCK(&media->myMutex);
     FindDeleteFifoQueueTask(media->sessions, RtmpSession, session);
-}
-
-RtmpConfig *createRtmpConfig(const char *app, const char *h264_file, const char *aac_file, 
-                            CreateH264Stream createH264Stream, DestroyH264Stream destroyH264Stream,
-                            GetH264Stream getH264Stream, CreateAacStream createAacStream, 
-                            DestroyAacStream destroyAacStream, GetAacStream getAacStream)
-{
-
-    RtmpConfig *config = CALLOC(1, RtmpConfig);
-    if (!config)
-        return NULL;
-
-    config->app = app;
-
-    config->aac_file  = aac_file;
-    config->h264_file = h264_file;
-
-    config->createH264Stream  = createH264Stream;
-    config->destroyH264Stream = destroyH264Stream;
-    config->getH264Stream     = getH264Stream;
-
-    config->createAacStream   = createAacStream;
-    config->destroyAacStream  = destroyAacStream;
-    config->getAacStream      = getAacStream;
-
-    return config;
-}
-
-RtmpConfig *createFileRtmpConfig(const char *app, const char *h264_file, const char *aac_file)
-{
-    return createRtmpConfig(app, h264_file, aac_file, 
-                        createH264Media, destroyH264Media, getH264MediaFrame, 
-                        createAacMedia,  destroyAacMedia, getAacMediaFrame);
+    MUTEX_UNLOCK(&media->myMutex);
 }
 
 RtmpMedia *createRtmpMedia(RtmpConfig *config)
@@ -244,6 +185,8 @@ RtmpMedia *createRtmpMedia(RtmpConfig *config)
     snprintf(media->app, sizeof(media->app), "%s", config->app);
 
     media->config = config;
+
+    MUTEX_INIT(&media->myMutex);
 
     do {
         if (config->createH264Stream)
@@ -293,9 +236,8 @@ void destroyRtmpMedia(RtmpMedia *media)
     if (media->audio && media->config && media->config->destroyAacStream)
         media->config->destroyAacStream(media->audio);
 
-    FREE(media->config);
-
     destroyFifoQueueTask(media->sessions, RtmpSession);
+    MUTEX_DESTROY(&media->myMutex);
 
     media->scher  = NULL;
     media->atimer = NULL;
