@@ -3,7 +3,7 @@
 
 #include <alsa/asoundlib.h>
 #include <schedule/net-common.h>
-#include <buffer.h>
+#include <schedule/buffer.h>
 
 typedef struct 
 {
