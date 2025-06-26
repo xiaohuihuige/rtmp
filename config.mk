@@ -13,4 +13,4 @@ DYNAMIC_NAME = $(LIB_DIR)/librtmp.so
 
 CC :=gcc
 AR :=ar
-CFLAGS =
+CFLAGS = -lasound -lrockchip_mpp -lrockchip_vpu 

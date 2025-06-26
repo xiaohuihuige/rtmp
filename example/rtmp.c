@@ -95,77 +95,77 @@ int main()
             break;
 
         app_config = createFileRtmpConfig("app",
-                                        "./resources/test.h264",
+                                        "./resources/out.h264",
                                         "./resources/suiyueruge.aac");
         if (!app_config)
             break;
 
-        light_config = createFileRtmpConfig("light",
-                                        "./resources/light.h264",
-                                        NULL);
-        if (!light_config)
-            break;
+        // light_config = createFileRtmpConfig("light",
+        //                                 "./resources/light.h264",
+        //                                 NULL);
+        // if (!light_config)
+        //     break;
 
-        girl_config = createFileRtmpConfig("girl",
-                                           "./resources/girl.h264",
-                                           NULL);
-        if (!girl_config)
-            break;
+        // girl_config = createFileRtmpConfig("girl",
+        //                                    "./resources/girl.h264",
+        //                                    NULL);
+        // if (!girl_config)
+        //     break;
 
-        mountain_config = createFileRtmpConfig("mountain",
-                                               "./resources/mountain.h264",
-                                               NULL);
-        if (!mountain_config)
-            break;
+        // mountain_config = createFileRtmpConfig("mountain",
+        //                                        "./resources/mountain.h264",
+        //                                        NULL);
+        // if (!mountain_config)
+        //     break;
 
-        poker_config = createFileRtmpConfig("poker",
-                                            "./resources/poker_face.h264",
-                                            "./resources/poker_face.aac");
-        if (!poker_config)
-            break;
+        // poker_config = createFileRtmpConfig("poker",
+        //                                     "./resources/poker_face.h264",
+        //                                     "./resources/poker_face.aac");
+        // if (!poker_config)
+        //     break;
 
         app_media = createRtmpMedia(app_config);
         if (!app_media)
             break;
 
-        light_media = createRtmpMedia(light_config);
-        if (!light_media)
-            break;
+        // light_media = createRtmpMedia(light_config);
+        // if (!light_media)
+        //     break;
 
-        girl_media = createRtmpMedia(girl_config);
-        if (!girl_media)
-            break;
+        // girl_media = createRtmpMedia(girl_config);
+        // if (!girl_media)
+        //     break;
 
-        poker_media = createRtmpMedia(poker_config);
-        if (!poker_media)
-            break;
+        // poker_media = createRtmpMedia(poker_config);
+        // if (!poker_media)
+        //     break;
 
-        mountain_media = createRtmpMedia(mountain_config);
-        if (!mountain_media)
-            break;
+        // mountain_media = createRtmpMedia(mountain_config);
+        // if (!mountain_media)
+        //     break;
 
         addRtmpServerMedia(rtmp, app_media);
-        addRtmpServerMedia(rtmp, light_media);
-        addRtmpServerMedia(rtmp, girl_media);
-        addRtmpServerMedia(rtmp, poker_media);
-        addRtmpServerMedia(rtmp, mountain_media);
+        // addRtmpServerMedia(rtmp, light_media);
+        // addRtmpServerMedia(rtmp, girl_media);
+        // addRtmpServerMedia(rtmp, poker_media);
+        // addRtmpServerMedia(rtmp, mountain_media);
 
         while (keep_running) sleep(1);
     } while (0);
 
     destroyRtmpMedia(app_media);
-    destroyRtmpMedia(light_media);
-    destroyRtmpMedia(girl_media);
-    destroyRtmpMedia(poker_media);
-    destroyRtmpMedia(mountain_media);
+    // destroyRtmpMedia(light_media);
+    // destroyRtmpMedia(girl_media);
+    // destroyRtmpMedia(poker_media);
+    // destroyRtmpMedia(mountain_media);
 
     destroyRtmpServer(rtmp);
 
     destroyRtmpConfig(app_config);
-    destroyRtmpConfig(light_config);
-    destroyRtmpConfig(girl_config);
-    destroyRtmpConfig(poker_config);
-    destroyRtmpConfig(mountain_config);
+    // destroyRtmpConfig(light_config);
+    // destroyRtmpConfig(girl_config);
+    // destroyRtmpConfig(poker_config);
+    // destroyRtmpConfig(mountain_config);
 
     return EXIT_SUCCESS;
 }

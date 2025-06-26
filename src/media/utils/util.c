@@ -1,4 +1,5 @@
 #include "util.h"
+#include "h264_nal.h"
 
 Buffer *readMediaFile(const char *file_path)
 {
@@ -52,4 +53,64 @@ uint32_t calculateTimeStamp(double *fractional_part, int fps, int sample_number)
     }
 
     return integer_part;
+}
+
+
+Buffer *findTypeNaluBuffer(uint8_t *data, int length, int type)
+{
+    if (!data || length <= 0)
+        return NULL;
+
+    int index = 0;
+
+    while (index < length) 
+    {
+
+        //printfChar(data + index, 5);
+        int nal_start = 0, nal_end = 0;
+        int resp = find_nal_unit(data + index, length - index, &nal_start, &nal_end);
+        if (resp <= 0)
+        {
+            LOG("find_nal_unit %d, %d, %d, %d", data[index], data[index + 1], data[index + 2], data[index + 3]);
+            break;
+        }
+
+        uint8_t *nalu_start = data + index + nal_start;
+
+        int frame_type = (*nalu_start) & 0x1F;
+        if (type == frame_type)
+            return createFrameBuffer(nalu_start, nal_end - nal_start, frame_type, 0);
+
+        index += nal_end ;
+    }
+
+    return NULL;
+}
+
+Buffer *findFrameNaluBuffer(uint8_t *data, int length)
+{
+    if (!data || length <= 0)
+        return NULL;
+
+    int index = 0;
+
+    while (index < length) 
+    {
+        int nal_start = 0, nal_end = 0;
+        if (find_nal_unit(data + index, length - index, &nal_start, &nal_end) <= 0)
+            break;
+
+        uint8_t *nalu_start = data + index + nal_start;
+
+        int frame_type = (*nalu_start) & 0x1F;
+    
+        if (NAL_UNIT_TYPE_SPS != frame_type  && 
+            NAL_UNIT_TYPE_PPS != frame_type  && 
+            NAL_UNIT_TYPE_SEI != frame_type)
+            return createFrameBuffer(nalu_start, nal_end - nal_start, frame_type, 0);
+
+        index += nal_end;
+    }
+
+    return NULL;
 }

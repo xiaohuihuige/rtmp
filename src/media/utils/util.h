@@ -4,10 +4,15 @@
 #include <schedule/net-common.h>
 #include <schedule/tcp_server.h>
 #include <schedule/timestamp.h>
+#include <schedule/buffer.h>
+#include "type.h"
 
 Buffer *readMediaFile(const char *file_path);
 void printfRtmpAddr(int port, const char *app);
 
 uint32_t calculateTimeStamp(double *fractional_part, int fps, int sample_number);
+
+Buffer *findTypeNaluBuffer(uint8_t *data, int length, int type);
+Buffer *findFrameNaluBuffer(uint8_t *data, int length);
 
 #endif

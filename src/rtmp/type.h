@@ -232,6 +232,7 @@ typedef struct
 	int videodatarate;
 	int videocodecid;
 	double fractional_part;
+	void *mpp_context;
 } VideoMedia;
 
 typedef struct 

@@ -11,4 +11,4 @@ $(OBJ_DIR)/%.o: %.c
 subdir:
 	$(MAKE) -C ./utils      CFLAGS="$(CFLAGS)" OBJ_DIR=$(OBJ_DIR) CC=$(CC) AR=$(AR)
 	$(MAKE) -C ./localfile  CFLAGS="$(CFLAGS)" OBJ_DIR=$(OBJ_DIR) CC=$(CC) AR=$(AR)
-#	$(MAKE) -C ./rockchip   CFLAGS="$(CFLAGS)" OBJ_DIR=$(OBJ_DIR) CC=$(CC) AR=$(AR)
+	$(MAKE) -C ./rockchip   CFLAGS="$(CFLAGS)" OBJ_DIR=$(OBJ_DIR) CC=$(CC) AR=$(AR)

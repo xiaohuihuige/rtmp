@@ -64,7 +64,7 @@ static int _runMediaStream(VideoMedia *media, Buffer *buffer)
     uint8_t *nalu_start = buffer->data + buffer->index + nal_start;
 
     int frame_type = (*nalu_start) & 0x1F;
-
+   
     _paserNaluPacket(media, nalu_start, nal_end - nal_start, frame_type);
 
     buffer->index += nal_end - nal_start;

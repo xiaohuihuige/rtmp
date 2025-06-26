@@ -1,6 +1,7 @@
 #include "media_config.h"
 #include "aac.h"
 #include "h264.h"
+#include "mpp_h264.h"
 
 RtmpConfig *createRtmpConfig(const char *app, const char *h264_file, const char *aac_file,
                              CreateH264Stream createH264Stream, DestroyH264Stream destroyH264Stream,
@@ -40,9 +41,9 @@ RtmpConfig *createFileRtmpConfig(const char *app, const char *h264_file, const c
                             createAacMedia, destroyAacMedia, getAacMediaFrame);
 }
 
-RtmpConfig *createOnlieRtmpConfig(const char *app, const char *h264_file, const char *aac_file)
+RtmpConfig *createOnlieRtmpConfig(const char *app, const char *v4l2_device, const char *aac_device)
 {
-    return createRtmpConfig(app, h264_file, aac_file,
-                            createH264Media, destroyH264Media, getH264MediaFrame,
+    return createRtmpConfig(app, v4l2_device,  aac_device,
+                            createMppH264Media, destroyMppH264Media, getMppH264MediaFrame,
                             createAacMedia, destroyAacMedia, getAacMediaFrame);
 }
