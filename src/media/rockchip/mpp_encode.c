@@ -1,50 +1,5 @@
 #include "mpp_encode.h"
-
-static RK_S32 qbias_arr_hevc[18] = {
-    3, 6, 13, 171, 171, 171, 171,
-    3, 6, 13, 171, 171, 220, 171, 85, 85, 85, 85
-};
-
-static RK_S32 qbias_arr_avc[18] = {
-    3, 6, 13, 683, 683, 683, 683,
-    3, 6, 13, 683, 683, 683, 683, 341, 341, 341, 341
-};
-
-static RK_S32 aq_rnge_arr[10] = {
-    5, 5, 10, 12, 12,
-    5, 5, 10, 12, 12
-};
-
-static RK_S32 aq_thd_smart[16] = {
-    1,  3,  3,  3,  3,  3,  5,  5,
-    8,  8,  8, 15, 15, 20, 25, 28
-};
-
-static RK_S32 aq_step_smart[16] = {
-    -8, -7, -6, -5, -4, -3, -2, -1,
-    0,  1,  2,  3,  4,  6,  8, 10
-};
-
-static RK_S32 aq_thd[16] = {
-    0,  0,  0,  0,
-    3,  3,  5,  5,
-    8,  8,  8,  15,
-    15, 20, 25, 25
-};
-
-static RK_S32 aq_step_i_ipc[16] = {
-    -8, -7, -6, -5,
-    -4, -3, -2, -1,
-    0,  1,  2,  3,
-    5,  7,  7,  8,
-};
-
-static RK_S32 aq_step_p_ipc[16] = {
-    -8, -7, -6, -5,
-    -4, -2, -1, -1,
-    0,  2,  3,  4,
-    6,  8,  9,  10,
-};
+#include "util.h"
 
 static void _initMppEncodeConfig(MppContext * ctx, int width, int height, int fps)
 {
@@ -56,7 +11,6 @@ static void _initMppEncodeConfig(MppContext * ctx, int width, int height, int fp
     //此函数就是为了得到行列补齐16整除的数据，比如行是30，通过MPP_ALIGN（30，16）；的输出就是32；
     ctx->hor_stride = 2 * MPP_ALIGN(ctx->width, 16);
     ctx->ver_stride = 2 * MPP_ALIGN(ctx->height, 16);//MPP_ALIGN(ctx->height, 16);
-    LOG("--------------ctx->hor_stride %d -%d", ctx->hor_stride, ctx->ver_stride);
     //实测高度是360的时候，也可以正常运行，高度不用是16的倍数
     //经测试，只有MPP_FMT_YUV420SP(Y+UV交替)和MPP_FMT_YUV420P(Y+U+V)才可以
     ctx->fmt  = MPP_FMT_YUV422_YUYV; 
@@ -114,15 +68,15 @@ static int _initMppEncodeQuality(MppContext * ctx, EncodeConfig *config)
     RK_U32 constraint_set = 0;
 
     config->gop_mode    = 3;
-    config->gop_len     = ctx->fps * 2;
+    config->gop_len     = ctx->fps * 3;
     config->qp_max_i    = 51;
     config->qp_min_i    = 10;
 
     config->qp_delta_ip = 2;
 
-    config->qp_init     = -1;
-    config->qp_max      = 51;
-    config->qp_min      = 10;
+    config->qp_init     = 30;
+    config->qp_max      = 40;
+    config->qp_min      = 20;
 
     config->fps_in_flex = 1;
     config->fps_in_den  = 1;
@@ -186,7 +140,7 @@ static int _initMppEncodeQuality(MppContext * ctx, EncodeConfig *config)
     mpp_enc_cfg_set_s32(ctx->cfg, "rc:fqp_max_p", 45);
 
     mpp_enc_cfg_set_s32(ctx->cfg, "codec:type", ctx->type);
-    mpp_enc_cfg_set_s32(ctx->cfg, "h264:profile", 100);
+    mpp_enc_cfg_set_s32(ctx->cfg, "h264:profile", 66);
     mpp_enc_cfg_set_s32(ctx->cfg, "h264:level", 40);
     mpp_enc_cfg_set_s32(ctx->cfg, "h264:cabac_en", 1);
     mpp_enc_cfg_set_s32(ctx->cfg, "h264:cabac_idc", 0);
@@ -365,32 +319,20 @@ Buffer *encodeMppFrame(MppContext * ctx, Buffer *in_buffer)
 
     void *ptr   = mpp_packet_get_pos(packet);
     size_t len  = mpp_packet_get_length(packet);
-    if (len <= 0)
+    if (len <= 0|| ptr == NULL)
     {
         ERR("encode len error!!!");
         return NULL;
     }
 
-    // uint8_t *data = (uint8_t *)ptr;
-    // LOG("%d, %d, %d, %d, %d",data[0], data[1],data[2],data[3], data[4] & 0x1F);
-
-    uint8_t *data = (uint8_t *)malloc(len + 4);
-
-    memcpy(data, ptr, len);
-
-    data[len]     = 0;
-    data[len + 1] = 0;
-    data[len + 2] = 0;
-    data[len + 3] = 1;
-
-    Buffer *buffer = createFrameBuffer(data, len + 4, 0, 0);
-
-    mpp_packet_deinit(&packet);//会释放packet，所以需要在上面将packet数据拷贝出去
-
+    Buffer *buffer = findFrameNaluBuffer((uint8_t *)ptr, len);
+    mpp_packet_deinit(&packet);
+    if (!buffer)
+        return NULL;
     return buffer;
 }
 
-Buffer *getPpsAndSps(MppContext * ctx)
+Buffer *getPpsAndSps(MppContext * ctx, int type)
 {
     MPP_RET ret = MPP_OK;
     MppPacket packet = NULL;
@@ -405,23 +347,16 @@ Buffer *getPpsAndSps(MppContext * ctx)
            
     void *ptr   = mpp_packet_get_pos(packet);
     size_t len  = mpp_packet_get_length(packet);
-    // uint8_t *data = (uint8_t *)ptr;
-    // LOG("111----%d, %d, %d, %d, %d",data[0], data[1],data[2],data[3], data[4] & 0x1F);
+    if (len <= 0 || ptr == NULL)
+    {
+        ERR("encode len error!!!");
+        return NULL;
+    }
 
-
-    uint8_t *data = (uint8_t *)malloc(len + 4);
-
-    memcpy(data, ptr, len);
-
-    data[len]     = 0;
-    data[len + 1] = 0;
-    data[len + 2] = 0;
-    data[len + 3] = 1;
-
-    Buffer *buffer = createFrameBuffer(data, len + 4, 0, 0);
-
+    Buffer *buffer = findTypeNaluBuffer((uint8_t *)ptr, len, type);
     mpp_packet_deinit(&packet);
-
+    if (!buffer)
+        return NULL;
     return buffer;
 }
 

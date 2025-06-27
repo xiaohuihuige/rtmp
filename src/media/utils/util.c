@@ -61,27 +61,38 @@ Buffer *findTypeNaluBuffer(uint8_t *data, int length, int type)
     if (!data || length <= 0)
         return NULL;
 
+    int frame_length  = 0;
+    int frame_type = 0;
     int index = 0;
+    uint8_t *nalu_start = NULL;
 
     while (index < length) 
     {
-
-        //printfChar(data + index, 5);
         int nal_start = 0, nal_end = 0;
         int resp = find_nal_unit(data + index, length - index, &nal_start, &nal_end);
         if (resp <= 0)
         {
-            LOG("find_nal_unit %d, %d, %d, %d", data[index], data[index + 1], data[index + 2], data[index + 3]);
+            if (data[index] == 0 
+                &&  data[index + 1] == 0 
+                &&  data[index + 2] == 0 
+                &&  data[index + 3] == 1)
+            {
+                nalu_start = data + index + 4;
+                frame_type = (*nalu_start) & 0x1F;
+                frame_length = length - (index + 4);
+                if (type == frame_type)
+                    return createFrameBuffer(nalu_start, frame_length, frame_type, 0);
+            }
             break;
-        }
+        } 
 
-        uint8_t *nalu_start = data + index + nal_start;
-
-        int frame_type = (*nalu_start) & 0x1F;
+        nalu_start = data + index + nal_start;
+        frame_length = nal_end - nal_start;
+        frame_type = (*nalu_start) & 0x1F;
         if (type == frame_type)
-            return createFrameBuffer(nalu_start, nal_end - nal_start, frame_type, 0);
+            return createFrameBuffer(nalu_start, frame_length, frame_type, 0);
 
-        index += nal_end ;
+        index += nal_end;
     }
 
     return NULL;
@@ -92,18 +103,36 @@ Buffer *findFrameNaluBuffer(uint8_t *data, int length)
     if (!data || length <= 0)
         return NULL;
 
+    int frame_length  = 0;
+    int frame_type = 0;
     int index = 0;
+    uint8_t *nalu_start = NULL;
 
     while (index < length) 
     {
         int nal_start = 0, nal_end = 0;
-        if (find_nal_unit(data + index, length - index, &nal_start, &nal_end) <= 0)
+        int resp = find_nal_unit(data + index, length - index, &nal_start, &nal_end);
+        if (resp <= 0)
+        {
+            if (data[index] == 0 
+                &&  data[index + 1] == 0 
+                &&  data[index + 2] == 0 
+                &&  data[index + 3] == 1)
+            {
+                nalu_start = data + index + 4;
+                frame_type = (*nalu_start) & 0x1F;
+                frame_length = length - (index + 4);
+                if (NAL_UNIT_TYPE_SPS != frame_type  && 
+                    NAL_UNIT_TYPE_PPS != frame_type  && 
+                    NAL_UNIT_TYPE_SEI != frame_type)
+                    return createFrameBuffer(nalu_start, nal_end - nal_start, frame_type, 0);
+            }
             break;
+        } 
 
-        uint8_t *nalu_start = data + index + nal_start;
-
-        int frame_type = (*nalu_start) & 0x1F;
-    
+        nalu_start = data + index + nal_start;
+        frame_length = nal_end - nal_start;
+        frame_type = (*nalu_start) & 0x1F;
         if (NAL_UNIT_TYPE_SPS != frame_type  && 
             NAL_UNIT_TYPE_PPS != frame_type  && 
             NAL_UNIT_TYPE_SEI != frame_type)

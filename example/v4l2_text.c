@@ -92,7 +92,7 @@ int main()
         return EXIT_SUCCESS;
     } 
 
-    getPpsAndSps(ctx);
+    //getPpsAndSps(ctx);
 
     while (keep_running) {
         Buffer *buffer = getV4l2Frame(v4l2);

@@ -66,7 +66,7 @@ static int _sendVideoFrameTimer(void *args)
     {
         if (!task_node || !task_node->task)
             continue;
-        LOG("_sendVideoFrameToclient");
+        //LOG("_sendVideoFrameToclient");
         _sendVideoFrameToclient(media, (RtmpSession *)task_node->task);
     }
     MUTEX_UNLOCK(&media->myMutex);
@@ -162,7 +162,7 @@ void addRtmpSessionToMedia(RtmpMedia *media, RtmpSession *session)
         sendAudioAdtsStream(session, media->audio->adts_sequence, 
                             session->channle[AUDIO_CHANNL].time_base);
 
-    //_sendGopVideoFrameToclient(media, session, 6000);
+    _sendGopVideoFrameToclient(media, session, 6000);
 
     MUTEX_LOCK(&media->myMutex);
     enqueue(media->sessions, session);

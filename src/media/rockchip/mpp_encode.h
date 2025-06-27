@@ -82,6 +82,6 @@ MppContext *createMppEncode(int width, int height, int fps);
 void destroyMppEncode(MppContext *ctx);
 
 Buffer *encodeMppFrame(MppContext *ctx, Buffer *in_buffer);
-Buffer *getPpsAndSps(MppContext * ctx);
+Buffer *getPpsAndSps(MppContext * ctx, int type);
 
 #endif

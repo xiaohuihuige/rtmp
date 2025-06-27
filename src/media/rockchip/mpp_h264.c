@@ -4,7 +4,7 @@
 #include "util.h"
 #include "send_chunk.h"
 
-#define FRAME_COUNT 4
+#define FRAME_COUNT 3
 
 typedef struct 
 {
@@ -34,16 +34,14 @@ VideoMedia *createMppH264Media(const char *device_name)
         return NULL;
     } 
 
-    Buffer *buffer = getPpsAndSps(info->ctx);
-
-    media->sps_buffer = findTypeNaluBuffer(buffer->data, buffer->length, NAL_UNIT_TYPE_SPS);
+    media->sps_buffer = getPpsAndSps(info->ctx, NAL_UNIT_TYPE_SPS);
     if (!media->sps_buffer)
     {
-        ERR("media->pps_buffer");
+        ERR("media->sps_buffer");
         return NULL;
     }
 
-    media->pps_buffer = findTypeNaluBuffer(buffer->data, buffer->length, NAL_UNIT_TYPE_PPS);
+    media->pps_buffer = getPpsAndSps(info->ctx, NAL_UNIT_TYPE_PPS);
     if (!media->pps_buffer )
     {
         ERR("media->pps_buffer");
@@ -57,7 +55,7 @@ VideoMedia *createMppH264Media(const char *device_name)
     media->width         = sps->width;
     media->height        = sps->height;
     media->fps           = sps->fps;
-    media->duration      = (int)1000/media->fps; 
+    media->duration      = (int)1000/media->fps - 20; 
     media->level_idc     = sps->level_idc;
     media->profile_idc   = sps->profile_idc;
     media->videodatarate = VIDEODATARATE;
@@ -68,7 +66,6 @@ VideoMedia *createMppH264Media(const char *device_name)
         return NULL;
 
     FREE(sps);
-    FREE(buffer);
     return media;
 }
 
@@ -88,21 +85,23 @@ Buffer *getMppH264MediaFrame(VideoMedia *media, int index)
     Buffer *buffer = getV4l2Frame(mctx->v4l2);
     if (!buffer) 
         return NULL;
-
-    //LOG("%p, %d", buffer->data, buffer->length);
+    
+    static long long start_time = 0;
 
     Buffer *mpp_buffer = encodeMppFrame(mctx->ctx, buffer);
+    Buffer *rtmp_buffer = rtmpWriteVideoFrame(mpp_buffer->data, 
+                                            mpp_buffer->length, 
+                                            mpp_buffer->frame_type, 
+                                            calculateTimeStamp(&media->fractional_part, media->fps, 1));
     
-    Buffer *frame_buffer = findFrameNaluBuffer(mpp_buffer->data, mpp_buffer->length);
+    long long end_time = get_time_ms();
 
-    Buffer *rtmp_buffer = rtmpWriteVideoFrame(frame_buffer->data, 
-                                                frame_buffer->length, 
-                                                frame_buffer->frame_type, 
-                                                calculateTimeStamp(&media->fractional_part, media->fps, 1));
+    LOG("%d, %d, %lld", rtmp_buffer->length  , mpp_buffer->frame_type, end_time - start_time);
+
+    start_time = get_time_ms();
 
     FREE(buffer);
     FREE(mpp_buffer);
-    FREE(frame_buffer);
 
     return rtmp_buffer;
 }
