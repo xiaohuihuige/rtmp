@@ -55,7 +55,7 @@ VideoMedia *createMppH264Media(const char *device_name)
     media->width         = sps->width;
     media->height        = sps->height;
     media->fps           = sps->fps;
-    media->duration      = (int)1000/media->fps - 20; 
+    media->duration      = (int)1000/media->fps; 
     media->level_idc     = sps->level_idc;
     media->profile_idc   = sps->profile_idc;
     media->videodatarate = VIDEODATARATE;
@@ -89,14 +89,18 @@ Buffer *getMppH264MediaFrame(VideoMedia *media, int index)
     static long long start_time = 0;
 
     Buffer *mpp_buffer = encodeMppFrame(mctx->ctx, buffer);
+    // Buffer *rtmp_buffer = rtmpWriteVideoFrame(mpp_buffer->data, 
+    //                                         mpp_buffer->length, 
+    //                                         mpp_buffer->frame_type, 
+    //                                         calculateTimeStamp(&media->fractional_part, media->fps, 1));
+
     Buffer *rtmp_buffer = rtmpWriteVideoFrame(mpp_buffer->data, 
                                             mpp_buffer->length, 
                                             mpp_buffer->frame_type, 
-                                            calculateTimeStamp(&media->fractional_part, media->fps, 1));
-    
+                                            media->duration);
     long long end_time = get_time_ms();
 
-    LOG("%d, %d, %lld", rtmp_buffer->length  , mpp_buffer->frame_type, end_time - start_time);
+    //LOG("%d, %d, %lld", rtmp_buffer->length  , mpp_buffer->frame_type, end_time - start_time);
 
     start_time = get_time_ms();
 

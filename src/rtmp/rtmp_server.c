@@ -68,7 +68,7 @@ void destroyRtmpServer(RtmpServer *rtmp)
     FREE(rtmp);
 }
 
-void addRtmpServerMedia(RtmpServer *rtmp, RtmpMedia *media)
+void addMediaToRtmpServer(RtmpServer *rtmp, RtmpMedia *media)
 {
     if (!rtmp || !media)
         return;
@@ -80,7 +80,7 @@ void addRtmpServerMedia(RtmpServer *rtmp, RtmpMedia *media)
     MUTEX_UNLOCK(&rtmp->myMutex);
 }
 
-RtmpMedia *findRtmpServerMedia(RtmpServer *rtmp, const char *app)
+RtmpMedia *findMediaByRtmpServer(RtmpServer *rtmp, const char *app)
 {
     if (!rtmp || !app)
         return NULL;

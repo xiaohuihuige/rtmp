@@ -7,6 +7,39 @@
 #include "rtmp_server.h"
 #include <schedule/amf0.h>
 
+static int _sendVideoFrameTimer(void *args)
+{
+    assert(args);
+
+    RtmpSession *session = (RtmpMedia *)args;
+
+    Buffer *frame = fifoQueuePopUnblock(session->queue);
+    if (!frame)
+        return NET_FAIL;
+
+    if (session->gop_count > 0 )
+        session->gop_count--;
+
+    if (session->gop_count == 0) {
+        modifyTimerTask(session->pull_stream_timer, session->media->video->duration - 10);
+        session->gop_count--;
+    }
+
+    sendFrameStream(session, frame, session->channle[VIDEO_CHANNL].time_base);
+
+    session->channle[VIDEO_CHANNL].time_base += frame->timestamp;
+
+    bufferReleaseSpace(frame);
+
+    return NET_SUCCESS;
+}
+
+int createSessionStreamTimer(RtmpSession *session)
+{
+    session->gop_count = session->media->video->fps * 2;
+    session->pull_stream_timer = addTimerTask(session->conn->tcps->scher,  0, 5, _sendVideoFrameTimer, (void *)session);
+}
+
 static int _parseFirstChunkPacket(RtmpPacket *packet, Buffer *buffer)
 {
     assert(packet || buffer);
@@ -163,17 +196,20 @@ RtmpSession *createRtmpSession(Seesion *conn)
         if (!session->b) 
             break;
 
+        session->queue = createFifoQueue();
+
         MUTEX_INIT(&session->myMutex);
 
         session->media          = NULL;
         session->conn           = conn;
         session->state          = RTMP_HANDSHAKE_UNINIT;
         session->packet         = NULL;
+        session->gop_count      = 0;
 
         session->channle[VIDEO_CHANNL].index = 0;
         session->channle[AUDIO_CHANNL].index = 0;
-        session->channle[VIDEO_CHANNL].time_base = 1000;
-        session->channle[AUDIO_CHANNL].time_base = 1000;
+        session->channle[VIDEO_CHANNL].time_base = 10;
+        session->channle[AUDIO_CHANNL].time_base = 10;
 
         LOG("create rtmp session success %p", session);
 
@@ -192,7 +228,11 @@ void destroyRtmpSession(RtmpSession *session)
 
     LOG("destroy Rtmp Session %p", session);
 
-    deleteRtmpSessionToMedia(session->media, session);
+    removeRtmpSessionByMedia(session->media, session);
+
+    if (session->pull_stream_timer)
+        deleteTimerTask(session->pull_stream_timer);
+
     MUTEX_DESTROY(&session->myMutex);
     session->media = NULL;
     session->conn = NULL;

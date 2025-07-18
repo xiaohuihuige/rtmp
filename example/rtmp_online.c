@@ -80,12 +80,12 @@ int main()
     RtmpConfig *app_config = NULL;
 
     do {
-        rtmp = createRtmpServer(DEFAULT_IP, 3000);
+        rtmp = createRtmpServer(DEFAULT_IP, 1935);
         if (!rtmp)
             break;
 
         app_config = createOnlieRtmpConfig("app",
-                                        "/dev/video1",
+                                        "/dev/video0",
                                         NULL);
         if (!app_config)
             break;
@@ -94,7 +94,7 @@ int main()
         if (!app_media)
             break;
         
-        addRtmpServerMedia(rtmp, app_media);
+        addMediaToRtmpServer(rtmp, app_media);
     } while (0);
 
     while (keep_running) 

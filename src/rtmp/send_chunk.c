@@ -216,22 +216,22 @@ int sendFrameStream(RtmpSession *session, Buffer *frame, uint32_t delta)
     if (!session || !frame)
         return NET_FAIL;
 
-    // HeaderChunk header = {
-    //     .fmt = RTMP_CHUNK_TYPE_0,
-    //     .csid = RTMP_CHANNEL_DATA,
-    //     .timestamp =  delta,
-    //     .length = frame->length,
-    //     .type_id = RTMP_TYPE_VIDEO,
-    //     .stream_id = 0,
-    // };
-
     HeaderChunk header = {
-        .fmt = RTMP_CHUNK_TYPE_1,
-        .csid = RTMP_CHANNEL_DATA1,
-        .timestamp = delta,
+        .fmt = RTMP_CHUNK_TYPE_0,
+        .csid = RTMP_CHANNEL_DATA,
+        .timestamp =  delta,
         .length = frame->length,
         .type_id = RTMP_TYPE_VIDEO,
+        .stream_id = 0,
     };
+
+    // HeaderChunk header = {
+    //     .fmt = RTMP_CHUNK_TYPE_1,
+    //     .csid = RTMP_CHANNEL_DATA1,
+    //     .timestamp = delta,
+    //     .length = frame->length,
+    //     .type_id = RTMP_TYPE_VIDEO,
+    // };
     
     return _sendRtmpPacket(session, &header, frame);
 }

@@ -5,9 +5,11 @@
 #include <schedule/tcp_server.h>
 #include <schedule/timestamp.h>
 #include "type.h"
+#include <schedule/fifo_queue.h>
 
 typedef struct 
 {
+   int gop_count;
    int state;
    Seesion *conn;
    RtmpPacket *packet;
@@ -17,10 +19,14 @@ typedef struct
    RtmpMedia *media;
    MediaChannle channle[2];
    Mutex myMutex;
+   TaskTimer *pull_stream_timer;
+   Queue *queue;
 } RtmpSession;
 
 RtmpSession *createRtmpSession(Seesion *conn);
 void destroyRtmpSession(RtmpSession *session);
 void recvRtmpSession(RtmpSession *session, Buffer *buffer);
+
+int createSessionStreamTimer(RtmpSession *session);
 
 #endif

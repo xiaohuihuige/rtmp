@@ -15,8 +15,8 @@ typedef struct
 RtmpServer *createRtmpServer(const char *ip, int port);
 void destroyRtmpServer(RtmpServer *rtmp);
 
-void addRtmpServerMedia(RtmpServer *rtmp, RtmpMedia *media);
-void deleteRtmpServerMedia(RtmpServer *rtmp, RtmpMedia *media);
-RtmpMedia *findRtmpServerMedia(RtmpServer *rtmp, const char *app);
+void addMediaToRtmpServer(RtmpServer *rtmp, RtmpMedia *media);
+void removMeidaByRtmpServer(RtmpServer *rtmp, RtmpMedia *media);
+RtmpMedia *findMediaByRtmpServer(RtmpServer *rtmp, const char *app);
 
 #endif

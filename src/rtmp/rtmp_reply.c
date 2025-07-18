@@ -12,7 +12,7 @@ int rtmpSendConnect(RtmpSession *session, HeaderChunk *header, int code, double 
     if (!buffer)
         return NET_FAIL;
 
-    session->media = findRtmpServerMedia((RtmpServer *)session->conn->tcps->parent, session->config.app);
+    session->media = findMediaByRtmpServer((RtmpServer *)session->conn->tcps->parent, session->config.app);
     if (!session->media)
     {
         ERR("find rtmp stream error");
@@ -72,6 +72,8 @@ int rtmpSendOnplay(RtmpSession *session, HeaderChunk *header, int code, double t
     FREE(buffer);
 
     addRtmpSessionToMedia(session->media, session);
+
+    createSessionStreamTimer(session);
 
     return NET_SUCCESS; 
 }

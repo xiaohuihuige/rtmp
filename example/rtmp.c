@@ -144,11 +144,11 @@ int main()
         // if (!mountain_media)
         //     break;
 
-        addRtmpServerMedia(rtmp, app_media);
-        // addRtmpServerMedia(rtmp, light_media);
-        // addRtmpServerMedia(rtmp, girl_media);
-        // addRtmpServerMedia(rtmp, poker_media);
-        // addRtmpServerMedia(rtmp, mountain_media);
+        addMediaToRtmpServer(rtmp, app_media);
+        // addMediaToRtmpServer(rtmp, light_media);
+        // addMediaToRtmpServer(rtmp, girl_media);
+        // addMediaToRtmpServer(rtmp, poker_media);
+        // addMediaToRtmpServer(rtmp, mountain_media);
 
         while (keep_running) sleep(1);
     } while (0);

@@ -257,6 +257,16 @@ typedef AudioMedia *(*CreateAacStream)(const char *file);
 typedef void (*DestroyAacStream)(AudioMedia *meida);
 typedef Buffer *(*GetAacStream)(AudioMedia *media, int index);
 
+typedef int (*sendFrameToClient)(void *, Buffer *);
+
+typedef struct 
+{
+    size_t  haved_idr_count;
+    size_t  max_frame_count;
+    Buffer *frame;
+    struct list_head list;
+} GopCache;
+
 typedef struct 
 {
     const char *app;
@@ -266,6 +276,7 @@ typedef struct
 	CreateH264Stream createH264Stream;
 	DestroyH264Stream destroyH264Stream;
 	GetH264Stream getH264Stream;
+
 	CreateAacStream createAacStream;
 	DestroyAacStream destroyAacStream;
 	GetAacStream getAacStream;
@@ -273,6 +284,8 @@ typedef struct
 
 typedef struct 
 {
+	GopCache *gop;
+
     char app[64];
     VideoMedia *video;
     AudioMedia *audio;
