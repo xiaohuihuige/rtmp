@@ -103,7 +103,7 @@ Buffer *findFrameNaluBuffer(uint8_t *data, int length)
     if (!data || length <= 0)
         return NULL;
 
-    int frame_length  = 0;
+    //int frame_length  = 0;
     int frame_type = 0;
     int index = 0;
     uint8_t *nalu_start = NULL;
@@ -121,7 +121,7 @@ Buffer *findFrameNaluBuffer(uint8_t *data, int length)
             {
                 nalu_start = data + index + 4;
                 frame_type = (*nalu_start) & 0x1F;
-                frame_length = length - (index + 4);
+                //frame_length = length - (index + 4);
                 if (NAL_UNIT_TYPE_SPS != frame_type  && 
                     NAL_UNIT_TYPE_PPS != frame_type  && 
                     NAL_UNIT_TYPE_SEI != frame_type)
@@ -131,7 +131,7 @@ Buffer *findFrameNaluBuffer(uint8_t *data, int length)
         } 
 
         nalu_start = data + index + nal_start;
-        frame_length = nal_end - nal_start;
+        //frame_length = nal_end - nal_start;
         frame_type = (*nalu_start) & 0x1F;
         if (NAL_UNIT_TYPE_SPS != frame_type  && 
             NAL_UNIT_TYPE_PPS != frame_type  && 

@@ -23,58 +23,77 @@ VideoMedia *createMppH264Media(const char *device_name)
         return NULL;
 
     MppInfo *info = (MppInfo *)media->mpp_context;
+    sps_t *sps = NULL;
 
-    info->v4l2 = createV4l2Capture(device_name, FRAME_COUNT, 640, 480, V4L2_PIX_FMT_YUYV, 30);
-    if (!info->v4l2)
-        return NULL;
+    do {
+        info->v4l2 = createV4l2Capture(device_name, FRAME_COUNT, 640, 480, V4L2_PIX_FMT_YUYV, 30);
+        if (!info->v4l2)
+        {
+            ERR("create v4l2 fail");
+            break;
+        }
 
-    info->ctx = createMppEncode(640, 480, 30); 
-    if (!info->ctx) {
-        destroyV4l2Capture(info->v4l2);
-        return NULL;
-    } 
+        info->ctx = createMppEncode(640, 480, 30); 
+        if (!info->ctx) 
+            break;
 
-    media->sps_buffer = getPpsAndSps(info->ctx, NAL_UNIT_TYPE_SPS);
-    if (!media->sps_buffer)
-    {
-        ERR("media->sps_buffer");
-        return NULL;
-    }
+        media->sps_buffer = getPpsAndSps(info->ctx, NAL_UNIT_TYPE_SPS);
+        if (!media->sps_buffer)
+        {
+            ERR("media->sps_buffer");
+            break;
+        }
 
-    media->pps_buffer = getPpsAndSps(info->ctx, NAL_UNIT_TYPE_PPS);
-    if (!media->pps_buffer )
-    {
-        ERR("media->pps_buffer");
-        return NULL;
-    }
+        media->pps_buffer = getPpsAndSps(info->ctx, NAL_UNIT_TYPE_PPS);
+        if (!media->pps_buffer )
+        {
+            ERR("media->pps_buffer");
+            break;
+        }
+
+        sps = read_seq_parameter_set_rbsp(media->sps_buffer);
+        if (!sps)
+            break;
+
+        media->width         = sps->width;
+        media->height        = sps->height;
+        media->fps           = sps->fps;
+        media->duration      = (int)1000/media->fps; 
+        media->level_idc     = sps->level_idc;
+        media->profile_idc   = sps->profile_idc;
+        media->videodatarate = VIDEODATARATE;
+        media->videocodecid  = VIDEOCODECID_H264;
+
+        FREE(sps);
         
-    sps_t *sps = read_seq_parameter_set_rbsp(media->sps_buffer);
-    if (!sps)
-        return NULL;
+        media->avc_sequence = rtmpAvcSequence(media->sps_buffer, media->pps_buffer);
+        if (!media->avc_sequence) 
+            break;
 
-    media->width         = sps->width;
-    media->height        = sps->height;
-    media->fps           = sps->fps;
-    media->duration      = (int)1000/media->fps; 
-    media->level_idc     = sps->level_idc;
-    media->profile_idc   = sps->profile_idc;
-    media->videodatarate = VIDEODATARATE;
-    media->videocodecid  = VIDEOCODECID_H264;
+        return media;
 
-    media->avc_sequence = rtmpAvcSequence(media->sps_buffer, media->pps_buffer);
-    if (!media->avc_sequence) 
-        return NULL;
+    } while (0);
 
-    FREE(sps);
-    return media;
+    destroyMppH264Media(media);
+
+    return NULL;
 }
 
 void destroyMppH264Media(VideoMedia *media)
 {
+    if (!media)
+        return;
+
     MppInfo *mctx = (MppInfo  *)media->mpp_context;
-    destroyMppEncode(mctx->ctx);
+    
+    if (mctx && mctx->ctx)
+        destroyMppEncode(mctx->ctx);
+
     destroyV4l2Capture(mctx->v4l2);
 
+    FREE(media->avc_sequence);
+	FREE(media->pps_buffer);
+    FREE(media->sps_buffer);
     FREE(media->mpp_context);
     FREE(media);
 }
@@ -86,7 +105,7 @@ Buffer *getMppH264MediaFrame(VideoMedia *media, int index)
     if (!buffer) 
         return NULL;
     
-    static long long start_time = 0;
+    //static long long start_time = 0;
 
     Buffer *mpp_buffer = encodeMppFrame(mctx->ctx, buffer);
     // Buffer *rtmp_buffer = rtmpWriteVideoFrame(mpp_buffer->data, 
@@ -98,11 +117,11 @@ Buffer *getMppH264MediaFrame(VideoMedia *media, int index)
                                             mpp_buffer->length, 
                                             mpp_buffer->frame_type, 
                                             media->duration);
-    long long end_time = get_time_ms();
+    //long long end_time = get_time_ms();
 
     //LOG("%d, %d, %lld", rtmp_buffer->length  , mpp_buffer->frame_type, end_time - start_time);
 
-    start_time = get_time_ms();
+    //start_time = get_time_ms();
 
     FREE(buffer);
     FREE(mpp_buffer);

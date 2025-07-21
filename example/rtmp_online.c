@@ -42,7 +42,8 @@ void signal_handler(int signum) {
             break;
     }
 }
-int main()
+
+void exception_handling()
 {
     struct sigaction sa;
     sa.sa_handler = signal_handler; // 设置信号处理函数
@@ -74,8 +75,11 @@ int main()
         perror("sigaction");
         exit(EXIT_FAILURE);
     }
+}
 
-    RtmpServer * rtmp = NULL;
+int main()
+{
+    RtmpServer *rtmp = NULL;
     RtmpMedia *app_media = NULL;
     RtmpConfig *app_config = NULL;
 
@@ -84,9 +88,7 @@ int main()
         if (!rtmp)
             break;
 
-        app_config = createOnlieRtmpConfig("app",
-                                        "/dev/video0",
-                                        NULL);
+        app_config = createOnlieRtmpConfig("app", "/dev/video0", NULL);
         if (!app_config)
             break;
 
@@ -103,5 +105,6 @@ int main()
     destroyRtmpMedia(app_media);
     destroyRtmpServer(rtmp);
     destroyRtmpConfig(app_config);
+
     return EXIT_SUCCESS;
 }

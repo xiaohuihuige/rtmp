@@ -7,9 +7,12 @@ static int _sendVideoFrameTimer(void *args)
     assert(args);
 
     FifoQueue *task_node = NULL;
+    Buffer *frame = NULL;
     RtmpMedia *media = (RtmpMedia *)args;
 
-    Buffer *frame = media->config->getH264Stream(media->video, 0);
+    if (media->config->getH264Stream)
+        frame = media->config->getH264Stream(media->video, 0);
+
     if (!frame)
         return NET_FAIL;
 
@@ -70,12 +73,12 @@ void removeRtmpSessionByMedia(RtmpMedia *media, RtmpSession *session)
     MUTEX_UNLOCK(&media->myMutex);
 }
 
-static void _initVideoChannl(RtmpMedia *media, RtmpConfig *config)
+static VideoMedia *_initVideoChannl(RtmpMedia *media, RtmpConfig *config)
 {
     if (!config->createH264Stream || !config->h264_file)
-        return;
+        return NULL;
 
-    media->video = config->createH264Stream(config->h264_file);
+    return config->createH264Stream(config->h264_file);
 }
 
 RtmpMedia *createRtmpMedia(RtmpConfig *config)
@@ -87,13 +90,11 @@ RtmpMedia *createRtmpMedia(RtmpConfig *config)
     if (!media)
         return NULL;
 
-    _initVideoChannl(media, config);
-
-    snprintf(media->app, sizeof(media->app), "%s", config->app);
-
-    media->config = config;
-
     MUTEX_INIT(&media->myMutex);
+
+    media->video = _initVideoChannl(media, config);
+    media->app = config->app;
+    media->config = config;
 
     do {
         media->sessions = createFifiQueue();
@@ -105,6 +106,8 @@ RtmpMedia *createRtmpMedia(RtmpConfig *config)
             break;
 
         media->gop = createGopCache(2);
+        if (!media->gop)
+            break;
 
         _startPushSessionStream(media);
 
@@ -123,27 +126,38 @@ void destroyRtmpMedia(RtmpMedia *media)
     if (!media)
         return;
 
-    if (media->vtimer)
+    if (media->vtimer) {
         deleteTimerTask(media->vtimer);
+        media->vtimer = NULL;
+    }
 
-    if (media->scher)
+    if (media->scher) {
         destroyTaskScheduler(media->scher);
+        media->scher  = NULL;
+    }
 
-    if (media->video && media->config && media->config->destroyH264Stream)
+    if (media->video && media->config && media->config->destroyH264Stream) {
         media->config->destroyH264Stream(media->video);
+        media->video  = NULL;
+    }
 
-    if (media->audio && media->config && media->config->destroyAacStream)
+    if (media->audio && media->config && media->config->destroyAacStream) {
         media->config->destroyAacStream(media->audio);
+        media->audio  = NULL;
+    }
 
-    destroyFifoQueueTask(media->sessions, RtmpSession);
+    if (!media->sessions) {
+        destroyFifoQueueTask(media->sessions, RtmpSession);
+        media->sessions = NULL;
+    }
+
+    if (media->gop) {
+        destroyGopCache(media->gop);
+        media->gop = NULL;
+    }
+
     MUTEX_DESTROY(&media->myMutex);
 
-    media->scher  = NULL;
-    media->vtimer = NULL;
-    media->sessions = NULL;
-    
-    media->audio  = NULL;
-    media->video  = NULL;
     media->config = NULL;
 
     FREE(media);

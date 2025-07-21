@@ -11,19 +11,11 @@ static int _sendVideoFrameTimer(void *args)
 {
     assert(args);
 
-    RtmpSession *session = (RtmpMedia *)args;
+    RtmpSession *session = (RtmpSession *)args;
 
     Buffer *frame = fifoQueuePopUnblock(session->queue);
     if (!frame)
         return NET_FAIL;
-
-    if (session->gop_count > 0 )
-        session->gop_count--;
-
-    if (session->gop_count == 0) {
-        modifyTimerTask(session->pull_stream_timer, session->media->video->duration - 10);
-        session->gop_count--;
-    }
 
     sendFrameStream(session, frame, session->channle[VIDEO_CHANNL].time_base);
 
@@ -36,8 +28,28 @@ static int _sendVideoFrameTimer(void *args)
 
 int createSessionStreamTimer(RtmpSession *session)
 {
-    session->gop_count = session->media->video->fps * 2;
-    session->pull_stream_timer = addTimerTask(session->conn->tcps->scher,  0, 5, _sendVideoFrameTimer, (void *)session);
+    if (!session || !session->media->video)
+        return NET_FAIL;
+
+    session->gop_count = session->media->video->fps * 6;
+
+    LOG("session gop count %d", session->gop_count);
+
+    while (session->gop_count--) {
+        if (NET_FAIL == _sendVideoFrameTimer(session))
+            break;
+    }
+
+    session->pull_stream_timer = addTimerTask(session->conn->tcps->scher,  
+                                                session->media->video->duration,
+                                                session->media->video->duration - 10,
+                                                 _sendVideoFrameTimer, 
+                                                 (void *)session);
+    if (!session->pull_stream_timer)
+        return NET_FAIL;
+
+    return NET_SUCCESS;
+
 }
 
 static int _parseFirstChunkPacket(RtmpPacket *packet, Buffer *buffer)
@@ -158,7 +170,8 @@ static void _parseRtmpPacket(RtmpSession *session, Buffer *buffer)
     assert(session || buffer);
 
     if (session->state == RTMP_HANDSHAKE_UNINIT || session->state == RTMP_HANDSHAKE_0)
-        return createRtmpHandShake(session, buffer);
+        if (!createRtmpHandShake(session, buffer))
+            return;
 
     return _parseRtmpChunk(session, buffer);
 }
@@ -191,12 +204,13 @@ RtmpSession *createRtmpSession(Seesion *conn)
         if (!session->buffer)
             break;
 
-
         session->b = bs_new(session->buffer->data, session->buffer->length);
         if (!session->b) 
             break;
 
         session->queue = createFifoQueue();
+        if (!session->queue)
+            break;
 
         MUTEX_INIT(&session->myMutex);
 
@@ -204,7 +218,8 @@ RtmpSession *createRtmpSession(Seesion *conn)
         session->conn           = conn;
         session->state          = RTMP_HANDSHAKE_UNINIT;
         session->packet         = NULL;
-        session->gop_count      = 0;
+        session->gop_count      = -1;
+        session->pull_stream_timer = NULL;
 
         session->channle[VIDEO_CHANNL].index = 0;
         session->channle[AUDIO_CHANNL].index = 0;
@@ -230,12 +245,20 @@ void destroyRtmpSession(RtmpSession *session)
 
     removeRtmpSessionByMedia(session->media, session);
 
-    if (session->pull_stream_timer)
+    if (session->pull_stream_timer) {
         deleteTimerTask(session->pull_stream_timer);
+        session->pull_stream_timer = NULL;
+    }
+
+    if (session->queue) {
+        releaseFifoQueue(session->queue);
+        session->queue = NULL;
+    }
 
     MUTEX_DESTROY(&session->myMutex);
     session->media = NULL;
     session->conn = NULL;
+
     FREE(session->buffer);
     FREE(session->b);
     FREE(session->packet);

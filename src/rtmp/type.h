@@ -2,6 +2,7 @@
 #define __TYPE_H__
 
 #include "chunk_header.h"
+#include <schedule/fifo_queue.h>
 
 #define RTMP_VERSION 			3
 #define RTMP_HANDSHAKE_SIZE	 	1536
@@ -250,16 +251,16 @@ typedef struct
 } AudioMedia;
 
 typedef VideoMedia *(*CreateH264Stream)(const char *file);
-typedef void (*DestroyH264Stream)(VideoMedia *media);
-typedef Buffer *(*GetH264Stream)(VideoMedia *media, int index);
-
 typedef AudioMedia *(*CreateAacStream)(const char *file);
+
+typedef void (*DestroyH264Stream)(VideoMedia *media);
 typedef void (*DestroyAacStream)(AudioMedia *meida);
+
+typedef Buffer *(*GetH264Stream)(VideoMedia *media, int index);
 typedef Buffer *(*GetAacStream)(AudioMedia *media, int index);
-
-typedef int (*sendFrameToClient)(void *, Buffer *);
-
+typedef void (*sendFrameToClient)(Queue *, void *);
 typedef struct 
+
 {
     size_t  haved_idr_count;
     size_t  max_frame_count;
@@ -286,7 +287,7 @@ typedef struct
 {
 	GopCache *gop;
 
-    char app[64];
+    const char *app;
     VideoMedia *video;
     AudioMedia *audio;
 	RtmpConfig *config;

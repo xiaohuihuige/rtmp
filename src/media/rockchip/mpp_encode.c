@@ -60,12 +60,12 @@ static void _initMppEncodeConfig(MppContext * ctx, int width, int height, int fp
 static int _initMppEncodeQuality(MppContext * ctx, EncodeConfig *config)
 {
     MPP_RET ret;
-    RK_U32 rotation  = 0;
-    RK_U32 mirroring = 0;
-    RK_U32 flip      = 0;
+    //RK_U32 rotation  = 0;
+    //RK_U32 mirroring = 0;
+    //RK_U32 flip      = 0;
 
     MppEncRefCfg ref = NULL;
-    RK_U32 constraint_set = 0;
+    //RK_U32 constraint_set = 0;
 
     config->gop_mode    = 3;
     config->gop_len     = ctx->fps * 3;

@@ -9,7 +9,6 @@
 #include <sys/mman.h>
 #include "v4l2_capture.h"
 
-
 static int camera_source_ioctl(int fd, int req, void* arg)
 {
     struct timespec poll_time;
@@ -28,6 +27,47 @@ static int camera_source_ioctl(int fd, int req, void* arg)
 
     return ret;
 }
+
+void getV4l2Config(int fd, const char *dev_name)
+{
+    struct v4l2_fmtdesc fmt;
+    fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+
+    LOG("Supported formats for device %s", dev_name);
+
+    for (fmt.index = 0; ioctl(fd, VIDIOC_ENUM_FMT, &fmt) == 0; fmt.index++) {
+        LOG("Index:  [%s]", fmt.description);
+        LOG("   fmt pixelformat: '%c%c%c%c'", fmt.pixelformat & 0xFF,
+                        (fmt.pixelformat >> 8) & 0xFF, (fmt.pixelformat >> 16) & 0xFF,
+                        (fmt.pixelformat >> 24) & 0xFF);
+        LOG("   description = '%s'", fmt.description);
+
+
+
+        // 获取分辨率
+        struct v4l2_frmsizeenum frame_size;
+        frame_size.pixel_format = fmt.pixelformat;
+        for (frame_size.index = 0; ioctl(fd, VIDIOC_ENUM_FRAMESIZES, &frame_size) == 0; frame_size.index++) {
+            if (frame_size.type == V4L2_FRMSIZE_TYPE_DISCRETE) {
+                LOG("   Resolution: %d x %d", frame_size.discrete.width, frame_size.discrete.height);
+
+                // 获取帧率
+                struct v4l2_frmivalenum frame_interval;
+                frame_interval.pixel_format = fmt.pixelformat;
+                frame_interval.width = frame_size.discrete.width;
+                frame_interval.height = frame_size.discrete.height;
+
+                for (frame_interval.index = 0; ioctl(fd, VIDIOC_ENUM_FRAMEINTERVALS, &frame_interval) == 0; frame_interval.index++) {
+                    if (frame_interval.type == V4L2_FRMIVAL_TYPE_DISCRETE) {
+                        LOG("       Frame Interval: %.2d fps",  frame_interval.discrete.denominator / frame_interval.discrete.numerator);
+                    }
+                }
+            }
+        }
+    }
+}
+
 
 //V4L2_PIX_FMT_YUV422P
 //V4L2_PIX_FMT_MJPEG
@@ -49,6 +89,8 @@ V4l2Capture *createV4l2Capture(const char *dev_name, int bufcnt, int width, int 
     v4l2->fd = open(dev_name, O_RDWR, 0);
     if (v4l2->fd < 0)
         return NULL;
+
+    getV4l2Config(v4l2->fd, dev_name);
 
     v4l2->bufcnt = bufcnt;
 

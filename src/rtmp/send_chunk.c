@@ -20,9 +20,9 @@ static int _sendRtmpPacket(RtmpSession *session, HeaderChunk *header, Buffer *fr
         bs_write_bytes(session->b, frame->data + index, chunk_size);
 
         int code = sendToClient(session, session->buffer->data, bs_pos(session->b));
-        if (code <= 0)
+        if (code <= 0) 
             return NET_FAIL;
-
+        
         index += chunk_size;
 
         header->fmt  = RTMP_CHUNK_TYPE_3;
@@ -71,6 +71,8 @@ Buffer *rtmpWriteAudioFrame(Buffer *frame, int sample_rate_index, int sample_siz
 //     }
 // https://blog.csdn.net/jctian000/article/details/93205521
 // https://www.cnblogs.com/8335IT/p/18208384
+// https://zhuanlan.zhihu.com/p/649512028
+// https://www.cnblogs.com/yuweifeng/p/17444833.html
 
 // 4bit soundFormat 1010(10)  0xA         AAC
 // 2bit(3) soundRate   11        44100Hz

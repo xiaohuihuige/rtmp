@@ -6,11 +6,6 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <unistd.h>
-#include "v4l2_capture.h"
-#include <linux/videodev2.h>
-#include "mpp_encode.h"
-
-#define OUTPUT_FILE "output.mpeg"
 
 volatile sig_atomic_t keep_running = 1;
 
@@ -48,7 +43,7 @@ void signal_handler(int signum) {
     }
 }
 
-int main()
+void exception_handling()
 {
     struct sigaction sa;
     sa.sa_handler = signal_handler; // 设置信号处理函数
@@ -80,30 +75,38 @@ int main()
         perror("sigaction");
         exit(EXIT_FAILURE);
     }
+}
 
+int main()
+{
+    exception_handling();
 
-    V4l2Capture *v4l2 = createV4l2Capture("/dev/video0", 4, 640, 480, V4L2_PIX_FMT_YUYV, 30);
-    if (!v4l2)
-        return EXIT_FAILURE;
+    RtmpServer * rtmp = NULL;
+    RtmpMedia *app_media = NULL;
+    RtmpConfig *app_config = NULL;
 
-    MppContext *ctx = createMppEncode(640, 480, 30); 
-    if (!ctx) {
-        destroyV4l2Capture(v4l2);
-        return EXIT_SUCCESS;
-    } 
+    do {
+        rtmp = createRtmpServer(DEFAULT_IP, 3000);
+        if (!rtmp)
+            break;
 
-    //getPpsAndSps(ctx);
+        app_config = createFileRtmpConfig("app", "./resources/out.h264", "./resources/suiyueruge.aac");
+        if (!app_config)
+            break;
 
-    while (keep_running) {
-        Buffer *buffer = getV4l2Frame(v4l2);
-        if (buffer) {
-            LOG("%p, %d", buffer->data, buffer->length);
-            Buffer *mpp_buffer = encodeMppFrame(ctx, buffer);
-            FREE(buffer);
-            FREE(mpp_buffer);
-        }
-    }
-    destroyMppEncode(ctx);
-    destroyV4l2Capture(v4l2);
+        app_media = createRtmpMedia(app_config);
+        if (!app_media)
+            break;
+
+        addMediaToRtmpServer(rtmp, app_media);
+    } while (0);
+
+    while (keep_running) 
+        sleep(1);
+
+    destroyRtmpMedia(app_media);
+    destroyRtmpServer(rtmp);
+    destroyRtmpConfig(app_config);
+
     return EXIT_SUCCESS;
 }

@@ -5,6 +5,6 @@
 #include <schedule/timestamp.h>
 #include "rtmp_session.h"
 
-void createRtmpHandShake(RtmpSession *session, Buffer *buffer);
+int createRtmpHandShake(RtmpSession *session, Buffer *buffer);
 
 #endif
