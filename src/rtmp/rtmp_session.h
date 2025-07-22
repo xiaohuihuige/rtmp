@@ -12,9 +12,9 @@ typedef struct
    int gop_count;
    int state;
    Seesion *conn;
-   RtmpPacket *packet;
    SessionConfig config;
    Buffer *buffer;
+   Buffer *temp_buffer;
    bs_t *b;
    RtmpMedia *media;
    MediaChannle channle[2];

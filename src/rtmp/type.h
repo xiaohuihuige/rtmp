@@ -5,7 +5,8 @@
 #include <schedule/fifo_queue.h>
 
 #define RTMP_VERSION 			3
-#define RTMP_HANDSHAKE_SIZE	 	1536
+#define RTMP_HANDSHAKE_SIZE	 	        1536
+
 #define RTMP_OUTPUT_CHUNK_SIZE 	4096
 
 #define RTMP_FMSVER				"FMS/3,0,1,123"
@@ -181,7 +182,6 @@ enum
 
 typedef struct 
 {
-	int index;
 	HeaderChunk header;
 	Buffer *buffer;
 } RtmpPacket;

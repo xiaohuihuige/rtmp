@@ -88,7 +88,7 @@ int main()
         if (!rtmp)
             break;
 
-        app_config = createOnlieRtmpConfig("app", "/dev/video0", NULL);
+        app_config = createOnlieRtmpConfig("app", "/dev/video1", NULL);
         if (!app_config)
             break;
 

@@ -52,143 +52,128 @@ int createSessionStreamTimer(RtmpSession *session)
 
 }
 
-static int _parseFirstChunkPacket(RtmpPacket *packet, Buffer *buffer)
+static void _parseRtmpHandshake(RtmpSession *session, Buffer *buffer)
 {
-    assert(packet || buffer);
+    if (!session->temp_buffer) 
+        session->temp_buffer = createBuffer(2 * RTMP_HANDSHAKE_SIZE + 1);
+    
+    int actual_len = writeBuffer(session->temp_buffer, session->temp_buffer->index, buffer->data, buffer->length);
+    session->temp_buffer->index += actual_len;
 
-    if (0 > readHeaderChunk(buffer, &packet->header))
-        return NET_FAIL;
-
-    if (packet->header.length <= 0)
-        return NET_FAIL;
-
-    packet->buffer = createBuffer(packet->header.length);
-
-    int leave_over = buffer->length - packet->header.header_len - buffer->index;
-
-    if (packet->buffer && leave_over > 0)
+    if (session->state == RTMP_HANDSHAKE_UNINIT)
     {
-        int residue = packet->header.length > leave_over ? leave_over : packet->header.length;
-        writeBuffer(packet->buffer, 0, buffer->data + buffer->index + packet->header.header_len, residue);
-        packet->index += residue;
-        buffer->index += residue + packet->header.header_len;
-    }
-
-    if (packet->index != packet->header.length)
-        return NET_FAIL;
-
-    return NET_SUCCESS;
-}
-
-static int _parseLastChunkPacket(RtmpPacket *packet, Buffer *buffer)
-{
-    assert(packet || buffer);
-
-    int residue = packet->header.length - packet->index;
-
-    if (residue > 0)
-    {
-
-        int need_len = residue > (buffer->length - buffer->index) ? buffer->length - buffer->index : residue;
-
-        writeBuffer(packet->buffer, packet->index, buffer->data + buffer->index, need_len);
-
-        packet->index += need_len;
-
-        buffer->index += need_len;
-    }
-
-    if (packet->index != packet->header.length)
-        return NET_FAIL;
-
-    return NET_SUCCESS;
-}
-
-static int _incompleteRtmpChunk(RtmpSession *session, Buffer *buffer)
-{
-    assert(session || buffer);
-
-    if (_parseLastChunkPacket(session->packet, buffer))
-        return NET_FAIL;
-
-    handleRtmpEvent(session, session->packet);
-
-    session->packet = NULL;
-
-    return NET_SUCCESS;
-}
-
-static int _completeRtmpChunk(RtmpSession *session, Buffer *buffer)
-{
-    assert(session || buffer);
-
-    RtmpPacket *packet = CALLOC(1, RtmpPacket);
-    if (!packet)
-        return NET_FAIL;
-
-    if (_parseFirstChunkPacket(packet, buffer))
-    {
-        if (packet->header.length <= 0)
-        {
-            FREE(packet->buffer);
-            FREE(packet);
-            return NET_FAIL;
-        }
-        session->packet = packet;
-        return NET_FAIL;
-    }
-
-    handleRtmpEvent(session, packet);
-
-    return NET_SUCCESS;
-}
-
-static void _parseRtmpChunk(RtmpSession *session, Buffer *buffer)
-{
-    assert(buffer);
-
-    while (1)
-    {
-        if (session->packet)
-        {
-            if (_incompleteRtmpChunk(session, buffer))
-                break;
-        }
-        else
-        {
-            if (_completeRtmpChunk(session, buffer))
-                break;
-        }
-
-        if (buffer->index >= buffer->length)
-            break;
-    }
-}
-
-static void _parseRtmpPacket(RtmpSession *session, Buffer *buffer)
-{
-    assert(session || buffer);
-
-    if (session->state == RTMP_HANDSHAKE_UNINIT || session->state == RTMP_HANDSHAKE_0)
-        if (!createRtmpHandShake(session, buffer))
+        if (session->temp_buffer->index < RTMP_HANDSHAKE_SIZE + 1)
             return;
 
-    return _parseRtmpChunk(session, buffer);
+        sendHandShakeS0S1S2(session, buffer);
+        session->state = RTMP_HANDSHAKE_0;
+    }
+
+    if (session->state == RTMP_HANDSHAKE_0)
+    {
+        if (session->temp_buffer->index < 2 * RTMP_HANDSHAKE_SIZE + 1)
+            return;
+
+        buffer->index = actual_len;
+        session->state = RTMP_HANDSHAKE_1;
+        FREE(session->temp_buffer);
+    }
 }
 
 static void _checkChunkComplete(Buffer *buffer)
 {
     assert(buffer);
 
-    int count = 0;
+    int count = buffer->index;
 
-    for (int i = 0; i < buffer->length; i++)
+    for (int i = buffer->index; i < buffer->length; i++)
     {
-        if (buffer->data[i] != 0xC3)
+        if (buffer->data[i] != 0xC3) 
             buffer->data[count++] = buffer->data[i];
     }
 
     buffer->length = count;
+}
+
+static RtmpPacket *_completeRtmpChunk(RtmpSession *session, Buffer *buffer)
+{
+    assert(session || buffer);
+
+    // RtmpPacket *packet = CALLOC(1, RtmpPacket);
+    // if (!packet)
+    //     return NULL;
+
+    LOG("buffer length %d, ", buffer->length, buffer->index);
+
+    RtmpPacket *packet = (RtmpPacket *)malloc(sizeof(RtmpPacket));
+    if (!packet)
+        return NULL;
+
+    LOG("CALLOC %p", packet);
+
+    int overturn = readHeaderChunk(buffer, &packet->header);
+    if (overturn) {
+        ERR("overturn error %p", packet);
+        FREE(packet);
+        return NULL;
+    }
+
+    if (packet->header.length <= 0 || packet->header.length > RTMP_OUTPUT_CHUNK_SIZE 
+        ||(packet->header.length + packet->header.header_len) > (buffer->length - buffer->index)) {
+        ERR("header length error %p", packet);
+        FREE(packet);
+        return NULL;
+    }
+
+    packet->buffer = createFrameBuffer(buffer->data + buffer->index + packet->header.header_len, packet->header.length, 0, 0);
+    if (!packet->buffer) {
+        ERR("createFrameBuffer error %p", packet);
+        FREE(packet);
+        return NULL;
+    }
+
+    buffer->index += packet->header.length + packet->header.header_len;
+
+    return packet;
+}
+
+static void _parseRtmpChunk(RtmpSession *session, Buffer *buffer)
+{
+    assert(buffer);
+
+    if (session->state != RTMP_HANDSHAKE_1 || buffer->index >= buffer->length)
+        return;
+
+    _checkChunkComplete(buffer);
+
+    if (!session->temp_buffer) 
+    {
+        session->temp_buffer = createFrameBuffer(buffer->data + buffer->index, buffer->length - buffer->index, 0, 0);
+    }
+    else 
+    {
+        LOG("session->temp_buffer %d, %d", session->temp_buffer->length, buffer->length - buffer->index);
+        session->temp_buffer = reinitializeBuffer(session->temp_buffer, buffer->data + buffer->index, buffer->length - buffer->index);
+    }
+    
+    
+    while (1)
+    {
+        RtmpPacket *packet = _completeRtmpChunk(session, session->temp_buffer);
+        if (!packet)
+            break;
+        
+        handleRtmpEvent(session, packet);
+
+        FREE(packet->buffer);
+        FREE(packet);
+
+        if (session->temp_buffer->index >= session->temp_buffer->length) {
+            LOG("free %p", session->temp_buffer);
+            FREE(session->temp_buffer);
+            break;
+        }
+    }
 }
 
 RtmpSession *createRtmpSession(Seesion *conn)
@@ -217,7 +202,7 @@ RtmpSession *createRtmpSession(Seesion *conn)
         session->media          = NULL;
         session->conn           = conn;
         session->state          = RTMP_HANDSHAKE_UNINIT;
-        session->packet         = NULL;
+        session->temp_buffer    = NULL;
         session->gop_count      = -1;
         session->pull_stream_timer = NULL;
 
@@ -259,20 +244,20 @@ void destroyRtmpSession(RtmpSession *session)
     session->media = NULL;
     session->conn = NULL;
 
+    FREE(session->temp_buffer);
     FREE(session->buffer);
     FREE(session->b);
-    FREE(session->packet);
     FREE(session);
 }
 
 void recvRtmpSession(RtmpSession *session, Buffer *buffer)
 {
-    if (!session || !buffer)
-        return;
+    assert(session || buffer);
 
-    _checkChunkComplete(buffer);
-
-    return _parseRtmpPacket(session, buffer);
+    if (session->state == RTMP_HANDSHAKE_UNINIT || session->state == RTMP_HANDSHAKE_0) 
+        _parseRtmpHandshake(session, buffer);
+    
+    return _parseRtmpChunk(session, buffer);
 }
 
 

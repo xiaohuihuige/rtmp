@@ -45,13 +45,12 @@ int writeChunkHeader(bs_t *b, HeaderChunk *header)
     return _wirteChunkHeader(b, header);
 }
 
-static void _readBasicHeader(bs_t *b, HeaderChunk *header)
+static int _readBasicHeader(bs_t *b, HeaderChunk *header)
 {
     assert(b || header);
 
     header->fmt = bs_read_u(b, 2);
     header->csid = bs_read_u(b, 6);
-
     if (header->csid == 0)
     {
         header->csid = bs_read_u8(b) + 64;
@@ -60,14 +59,15 @@ static void _readBasicHeader(bs_t *b, HeaderChunk *header)
     {
         header->csid = bs_read_u(b, 16) + 64 + 255;
     }
+    return bs_overrun(b);
 } 
 
-static void _readMessageHeader(bs_t *b, HeaderChunk *header)
+static int _readMessageHeader(bs_t *b, HeaderChunk *header)
 {
     assert(b || header);
 
     if (header->fmt == RTMP_CHUNK_TYPE_3)
-        return;
+        return NET_SUCCESS;
 
     if (header->fmt == RTMP_CHUNK_TYPE_0)
     {
@@ -98,6 +98,8 @@ static void _readMessageHeader(bs_t *b, HeaderChunk *header)
             header->timestamp = bs_read_u(b, 32);
         }
     }
+
+    return bs_overrun(b);
 }
 
 void _showChunkHeader(HeaderChunk *header)
@@ -110,23 +112,37 @@ void _showChunkHeader(HeaderChunk *header)
             header->length, header->type_id, header->stream_id);
 }
 
+
+static int _readHeaderChunk(bs_t *b, HeaderChunk *header)
+{
+    if (!b || !header)
+        return NET_FAIL;
+
+    _readBasicHeader(b, header);
+
+    _readMessageHeader(b, header);
+
+    header->header_len = bs_pos(b);
+
+    _showChunkHeader(header);
+
+    return bs_overrun(b);
+}
+
 int readHeaderChunk(Buffer *buffer, HeaderChunk *header)
 {
     if (!buffer || !header)
         return NET_FAIL;
 
-    bs_t *b = bs_new(buffer->data + buffer->index,  buffer->length);
+    bs_t *b = bs_new(buffer->data + buffer->index,  buffer->length - buffer->index);
     if (!b)
         return NET_FAIL;
 
-    _readBasicHeader(b, header);
-    _readMessageHeader(b, header);
+    LOG("buffer->length - buffer->index %d", buffer->length - buffer->index);
 
-    header->header_len = bs_pos(b);
+    int overturn = _readHeaderChunk(b, header);
 
     FREE(b);
 
-    //_showChunkHeader(header);
-
-    return header->header_len;
+    return overturn;
 }

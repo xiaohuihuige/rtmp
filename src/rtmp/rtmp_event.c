@@ -99,9 +99,7 @@ static int _handleEvent(RtmpSession *session, RtmpPacket *packet)
     }
 
     FREE(b);
-    FREE(packet->buffer);
-    FREE(packet);
-    
+
     return NET_SUCCESS;
 }
 
@@ -109,6 +107,6 @@ int handleRtmpEvent(RtmpSession *session, RtmpPacket *packet)
 {
     if (!session || !packet)
         return NET_FAIL;
-
+    
     return _handleEvent(session, packet);
 }
