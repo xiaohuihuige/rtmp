@@ -7,6 +7,6 @@
 
 VideoMedia *createMppH264Media(const char *device_name);
 void destroyMppH264Media(VideoMedia *media);
-Buffer *getMppH264MediaFrame(VideoMedia *media, int index);
+Buffer *getMppH264MediaFrame(VideoMedia *media);
 
 #endif

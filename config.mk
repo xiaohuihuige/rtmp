@@ -13,4 +13,11 @@ DYNAMIC_NAME = $(LIB_DIR)/librtmp.so
 
 CC :=gcc
 AR :=ar
-CFLAGS = -lasound -lrockchip_mpp -lrockchip_vpu 
+
+# LOG_LEVEL_ALL,
+# LOG_LEVEL_DEBUG,
+# LOG_LEVEL_INFO,
+# LOG_LEVEL_WAR,
+# LOG_LEVEL_ERR,
+
+CFLAGS = -lasound -lrockchip_mpp -lrockchip_vpu -lfaac -DLOG_LEVEL=LOG_LEVEL_ALL

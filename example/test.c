@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <unistd.h>
+#include "aac_audio.h"
 
 volatile sig_atomic_t keep_running = 1;
 
@@ -77,34 +78,13 @@ void exception_handling()
     }
 }
 
+
 int main()
 {
-    exception_handling();
+    //exception_handling();
+    AudioMedia *media = createAlsaAacMedia("aaa"); 
+
+    Buffer *buffer = getAlsaAacMediaFrame(media);
     
-    RtmpServer *rtmp = NULL;
-    RtmpMedia *app_media = NULL;
-    RtmpConfig *app_config = NULL;
-
-    rtmp = createRtmpServer(DEFAULT_IP, 1935);
-    if (!rtmp)
-        goto ERROR;
-
-    app_config = createFileRtmpConfig("app", "./resources/out.h264", "./resources/suiyueruge.aac");
-    if (!app_config)
-        goto ERROR;
-    
-    app_media = createRtmpMedia(app_config);
-    if (!app_media)
-        goto ERROR;
-        
-    addMediaToRtmpServer(rtmp, app_media);
-
-    while (keep_running) 
-        sleep(1);
-
-ERROR:    
-    destroyRtmpMedia(app_media);
-    destroyRtmpServer(rtmp);
-    destroyRtmpConfig(app_config);
-    return EXIT_SUCCESS;
+    destroyAlsaAacMedia(media);
 }

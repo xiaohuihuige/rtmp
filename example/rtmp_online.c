@@ -79,32 +79,32 @@ void exception_handling()
 
 int main()
 {
+    exception_handling();
+    
     RtmpServer *rtmp = NULL;
     RtmpMedia *app_media = NULL;
     RtmpConfig *app_config = NULL;
 
-    do {
-        rtmp = createRtmpServer(DEFAULT_IP, 1935);
-        if (!rtmp)
-            break;
+    rtmp = createRtmpServer(DEFAULT_IP, 1935);
+    if (!rtmp)
+        goto ERROR;
 
-        app_config = createOnlieRtmpConfig("app", "/dev/video1", NULL);
-        if (!app_config)
-            break;
-
-        app_media = createRtmpMedia(app_config);
-        if (!app_media)
-            break;
+    app_config = createOnlieRtmpConfig("app", "/dev/video1", NULL);
+    if (!app_config)
+        goto ERROR;
+    
+    app_media = createRtmpMedia(app_config);
+    if (!app_media)
+        goto ERROR;
         
-        addMediaToRtmpServer(rtmp, app_media);
-    } while (0);
+    addMediaToRtmpServer(rtmp, app_media);
 
     while (keep_running) 
         sleep(1);
 
+ERROR:    
     destroyRtmpMedia(app_media);
     destroyRtmpServer(rtmp);
     destroyRtmpConfig(app_config);
-
     return EXIT_SUCCESS;
 }

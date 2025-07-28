@@ -5,47 +5,31 @@
 #include <schedule/fifo_queue.h>
 
 #define RTMP_VERSION 			3
-#define RTMP_HANDSHAKE_SIZE	 	        1536
-
+#define RTMP_HANDSHAKE_SIZE	 	1536
 #define RTMP_OUTPUT_CHUNK_SIZE 	4096
-
 #define RTMP_FMSVER				"FMS/3,0,1,123"
 #define RTMP_CAPABILITIES		31
-
 #define RTMP_STREAM_LIVE		"live"
 #define RTMP_STREAM_RECORD		"record"
 #define RTMP_STREAM_APPEND		"append"
-
 #define RTMP_LEVEL_WARNING		"warning"
 #define RTMP_LEVEL_STATUS		"status"
 #define RTMP_LEVEL_ERROR		"error"
 #define RTMP_LEVEL_FINISH		"finish" // ksyun cdn
 #define RTMP_WINDOW_SIZE    	5000000
-
 #define RTMP_FRAME_HEADER_LENGTH 9
 #define RTMP_AVC_HEADER_LENGTH   16
-
-#define WIDTH_1280 			1280
-#define Height_720 			720
-#define DISPLAY_WIDTH_1280 	1280
-#define DISPLAY_Height_720 720
-#define DURATION 				0
-#define FRAMERATE 30
-#define FPS 30
-#define VIDEODATARATE 0
-#define VIDEOCODECID 7
-#define VIDEOCODECID_H263 2
-#define VIDEOCODECID_H264 7
-#define VIDEOCODECID_H265 12
+#define DURATION 				 0
+#define VIDEODATARATE            0
+#define VIDEOCODECID             7
+#define VIDEOCODECID_H263        2
+#define VIDEOCODECID_H264        7
+#define VIDEOCODECID_H265        12
 
 #define AUDIODATARATE 125
 #define AUDIOCODECID 10
-#define PROFILE 0
-#define LEVEL 0
-
 #define AUDIO_CHANNL 1
 #define VIDEO_CHANNL 0
-
 
 enum {
     NAL_UNIT_TYPE_UNSPECIFIED = 0,                    // Unspecified
@@ -202,18 +186,6 @@ typedef struct
 	char pageUrl[256]; // http://host/sample.html
 } SessionConfig;
 
-typedef struct
-{
-    uint32_t in_chunk_size;    // read from network
-    uint32_t out_chunk_size;   // write to network
-    uint32_t sequence_number;  // bytes read report
-    uint32_t window_size;      // server bandwidth (2500000)
-    uint32_t peer_bandwidth;   // client bandwidth
-    uint32_t buffer_length_ms; // s -> c
-    uint8_t  limit_type;       // client bandwidth limit
-    uint8_t  receive_audio;    // client don't want receive audio
-    uint8_t  receive_video;
-} TransmissionConfig;
 
 typedef struct 
 {
@@ -248,19 +220,10 @@ typedef struct
 	int audiosamplerate;
 	int audiosamplesize;
 	double fractional_part;
+	void *aac_context;
 } AudioMedia;
 
-typedef VideoMedia *(*CreateH264Stream)(const char *file);
-typedef AudioMedia *(*CreateAacStream)(const char *file);
-
-typedef void (*DestroyH264Stream)(VideoMedia *media);
-typedef void (*DestroyAacStream)(AudioMedia *meida);
-
-typedef Buffer *(*GetH264Stream)(VideoMedia *media, int index);
-typedef Buffer *(*GetAacStream)(AudioMedia *media, int index);
-typedef void (*sendFrameToClient)(Queue *, void *);
 typedef struct 
-
 {
     size_t  haved_idr_count;
     size_t  max_frame_count;
@@ -274,13 +237,13 @@ typedef struct
     const char *h264_file;
     const char *aac_file;
 
-	CreateH264Stream createH264Stream;
-	DestroyH264Stream destroyH264Stream;
-	GetH264Stream getH264Stream;
+	VideoMedia *(*createH264Stream)(const char *file);
+	void (*destroyH264Stream)(VideoMedia *media);
+	Buffer *(*getH264Stream)(VideoMedia *media);
 
-	CreateAacStream createAacStream;
-	DestroyAacStream destroyAacStream;
-	GetAacStream getAacStream;
+	AudioMedia *(*createAacStream)(const char *file);
+	void (*destroyAacStream)(AudioMedia *meida);
+	Buffer *(*getAacStream)(AudioMedia *media);
 } RtmpConfig;
 
 typedef struct 

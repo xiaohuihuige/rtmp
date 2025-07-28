@@ -4,11 +4,13 @@
 #include "mpp_h264.h"
 
 RtmpConfig *createRtmpConfig(const char *app, const char *h264_file, const char *aac_file,
-                             CreateH264Stream createH264Stream, DestroyH264Stream destroyH264Stream,
-                             GetH264Stream getH264Stream, CreateAacStream createAacStream,
-                             DestroyAacStream destroyAacStream, GetAacStream getAacStream)
+                             VideoMedia *(*createH264Stream)(const char *file), 
+                             void (*destroyH264Stream)(VideoMedia *media),
+                             Buffer *(*getH264Stream)(VideoMedia *media), 
+                             AudioMedia *(*createAacStream)(const char *file),
+                             void (*destroyAacStream)(AudioMedia *meida), 
+                             Buffer *(*getAacStream)(AudioMedia *media))
 {
-
     RtmpConfig *config = CALLOC(1, RtmpConfig);
     if (!config)
         return NULL;

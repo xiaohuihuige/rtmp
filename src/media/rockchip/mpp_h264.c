@@ -98,7 +98,7 @@ void destroyMppH264Media(VideoMedia *media)
     FREE(media);
 }
 
-Buffer *getMppH264MediaFrame(VideoMedia *media, int index)
+Buffer *getMppH264MediaFrame(VideoMedia *media)
 {
     MppInfo *mctx = (MppInfo  *)media->mpp_context;
     Buffer *buffer = getV4l2Frame(mctx->v4l2);

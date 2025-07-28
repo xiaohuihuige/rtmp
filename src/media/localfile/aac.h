@@ -33,6 +33,6 @@ typedef struct
 
 AudioMedia *createAacMedia(const char *file);
 void destroyAacMedia(AudioMedia *media);
-Buffer *getAacMediaFrame(AudioMedia *media, int index);
+Buffer *getAacMediaFrame(AudioMedia *media);
 
 #endif //  __AAC_H__

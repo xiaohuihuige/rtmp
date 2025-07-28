@@ -10,6 +10,6 @@ GopCache *createGopCache(int idr_count);
 void destroyGopCache(GopCache *gop);
 
 void pullFrameToGopCache(GopCache *gop, Buffer *frame);
-void sendGopCacheToClient(GopCache *gop, sendFrameToClient func, void *args);
+void sendGopCacheToClient(GopCache *gop, void (*sendFrameToClient)(Queue *, void *), void *args);
 
 #endif

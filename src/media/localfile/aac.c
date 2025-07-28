@@ -133,22 +133,22 @@ void destroyAacMedia(AudioMedia *media)
     FREE(media);
 }
 
-Buffer *getAacMediaFrame(AudioMedia *media, int index)
+Buffer *getAacMediaFrame(AudioMedia *media)
 {
-    if (media->frame_count <= index)
-        return NULL;
+    // if (media->frame_count <= index)
+    //     return NULL;
 
-    int count = 0;
-    FifoQueue *pos = NULL;
+    // int count = 0;
+    // FifoQueue *pos = NULL;
 
-    list_for_each_entry(pos, &media->queue->list, list)
-    {
-        if (count == index)
-        {
-            return pos->task; // 找到指定索引的数据
-        }
-        count++;
-    }
+    // list_for_each_entry(pos, &media->queue->list, list)
+    // {
+    //     if (count == index)
+    //     {
+    //         return pos->task; // 找到指定索引的数据
+    //     }
+    //     count++;
+    // }
 
     return NULL; // 如果索引超出范围，返回 NULL
 }

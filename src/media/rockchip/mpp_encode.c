@@ -264,7 +264,7 @@ MppContext *createMppEncode(int width, int height, int fps)
 
         _initEncodeBuffer(ctx);
 
-        LOG("mpp encode success %d", ctx->type);
+        LOG("mpp encode success type :%d", ctx->type);
         return ctx;
     } while (0);
 

@@ -81,30 +81,46 @@ int main()
 {
     exception_handling();
     
-    RtmpServer *rtmp = NULL;
-    RtmpMedia *app_media = NULL;
-    RtmpConfig *app_config = NULL;
+    RtmpServer *rtmp        = NULL;
+    RtmpMedia  *live_media  = NULL;
+    RtmpConfig *live_config = NULL;
+    RtmpMedia  *app_media   = NULL;
+    RtmpConfig *app_config  = NULL;
 
     rtmp = createRtmpServer(DEFAULT_IP, 1935);
     if (!rtmp)
         goto ERROR;
 
-    app_config = createFileRtmpConfig("app", "./resources/out.h264", "./resources/suiyueruge.aac");
+    app_config = createOnlieRtmpConfig("app", "/dev/video1", NULL);
     if (!app_config)
         goto ERROR;
     
+    live_config = createOnlieRtmpConfig("live", "/dev/video0", NULL);
+    if (!app_config)
+	goto ERROR;
+    
     app_media = createRtmpMedia(app_config);
     if (!app_media)
-        goto ERROR;
-        
+	goto ERROR;
+	
+    live_media = createRtmpMedia(live_config);
+    if (!app_media)
+	goto ERROR;
+    
     addMediaToRtmpServer(rtmp, app_media);
+    addMediaToRtmpServer(rtmp, live_media);
 
     while (keep_running) 
-        sleep(1);
+	sleep(1);
 
 ERROR:    
     destroyRtmpMedia(app_media);
-    destroyRtmpServer(rtmp);
+    destroyRtmpMedia(live_media);
+   
     destroyRtmpConfig(app_config);
+    destroyRtmpConfig(live_config);
+   
+    destroyRtmpServer(rtmp);
     return EXIT_SUCCESS;
 }
+    

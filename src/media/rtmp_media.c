@@ -11,7 +11,7 @@ static int _sendVideoFrameTimer(void *args)
     RtmpMedia *media = (RtmpMedia *)args;
 
     if (media->config->getH264Stream)
-        frame = media->config->getH264Stream(media->video, 0);
+        frame = media->config->getH264Stream(media->video);
 
     if (!frame)
         return NET_FAIL;

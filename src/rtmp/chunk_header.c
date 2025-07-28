@@ -3,6 +3,41 @@
 
 #define CHUNK_HEADER 14
 
+/*
+    表示chunk type，取值[0, 3]，即chunk共有4种类型
+    csid范围是3~65599，0~2为协议保留用作特殊信息；
+    通常控制流csid为2，命令流为3，开发中发现音视频流csid可自定义，如音频流4，视频流6
+*/
+
+// 5.3.1.1. Chunk Basic Header (p12)
+/*
+ 0 1 2 3 4 5 6 7
++-+-+-+-+-+-+-+-+
+|fmt|   cs id   |
++-+-+-+-+-+-+-+-+
+
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|fmt|     0     |   cs id - 64  |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|fmt|     1     |          cs id - 64           |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+*/
+// 5.3.1.2. Chunk Message Header (p13)
+/*
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                   timestamp                   |message length |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| message length (cont)         |message type id| msg stream id |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|           message stream id (cont)            |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+*/
+
 static int _wirteChunkHeader(bs_t *b, HeaderChunk *header)
 {
     assert(b || header);
@@ -124,7 +159,7 @@ static int _readHeaderChunk(bs_t *b, HeaderChunk *header)
 
     header->header_len = bs_pos(b);
 
-    _showChunkHeader(header);
+    //_showChunkHeader(header);
 
     return bs_overrun(b);
 }
@@ -134,11 +169,9 @@ int readHeaderChunk(Buffer *buffer, HeaderChunk *header)
     if (!buffer || !header)
         return NET_FAIL;
 
-    bs_t *b = bs_new(buffer->data + buffer->index,  buffer->length - buffer->index);
+    bs_t *b = bs_new(buffer->data + buffer->rindex,  buffer->index - buffer->rindex);
     if (!b)
         return NET_FAIL;
-
-    LOG("buffer->length - buffer->index %d", buffer->length - buffer->index);
 
     int overturn = _readHeaderChunk(b, header);
 

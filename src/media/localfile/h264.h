@@ -7,6 +7,6 @@
 
 VideoMedia *createH264Media(const char *file);
 void destroyH264Media(VideoMedia *media);
-Buffer *getH264MediaFrame(VideoMedia *media, int index);
+Buffer *getH264MediaFrame(VideoMedia *media);
 
 #endif // !__H264_H__

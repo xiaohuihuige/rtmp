@@ -7,7 +7,7 @@ EXECUTABLES = $(patsubst example/%.c, $(BIN_DIR)/%, $(wildcard example/*.c))
 SUBDIRS = $(shell find $(SRC_DIR) -type d)
 INCLUDE_PATHS = $(addprefix -I, $(SUBDIRS))
 
-CFLAGS += $(INCLUDE_PATHS) -lschedule  -lpthread -lrt -Wall -fPIC -g
+CFLAGS += $(INCLUDE_PATHS) -lschedule -lpthread -lrt -Wall -fPIC -g
 
 .PHONY: all clean subdir TEMP_PATH
 

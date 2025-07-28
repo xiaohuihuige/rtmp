@@ -79,7 +79,7 @@ void pullFrameToGopCache(GopCache *gop, Buffer *frame)
     list_add_tail(&new_gop->list, &gop->list);
 }
 
-void sendGopCacheToClient(GopCache *gop, sendFrameToClient func, void *args)
+void sendGopCacheToClient(GopCache *gop, void (*sendFrameToClient)(Queue *, void *), void *args)
 {
     if (!gop || !args)
         return;
@@ -91,6 +91,6 @@ void sendGopCacheToClient(GopCache *gop, sendFrameToClient func, void *args)
             continue;
 
         bufferReferenceCount(task_node->frame);
-        func(args, task_node->frame);                                                                                                                                            
+        sendFrameToClient(args, task_node->frame);                                                                                                                                            
     }  
 }
