@@ -78,7 +78,7 @@ typedef struct
     MppFrame frame;
 } MppContext;
 
-MppContext *createMppEncode(int width, int height, int fps);
+MppContext *createMppEncode(int width, int height, int fps, int format);
 void destroyMppEncode(MppContext *ctx);
 
 Buffer *encodeMppFrame(MppContext *ctx, Buffer *in_buffer);

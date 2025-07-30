@@ -1,31 +1,68 @@
 # 一个轻量型的rtmp服务器
-# 运行
+## 项目概述
+基于RK3588实现了一个RTMP流媒体服务器，主要特点包括：
+- 完整的RTMP协议支持: 握手、命令处理、媒体数据传输
+- 高性能网络处理，使用单线程Reactor模式
+- GOP缓存优化: 实现快速首屏和低延迟播放
+- 多路流支持: 支持多个视频源和多路拉流
+- 完善的错误处理: 异常检测和恢复机制
+- 媒体管理使用工厂模式，支持AAC, H264流，或者自定义流，增加扩展性
+- 使用buffer引用计数，多通道共享一个buffer，减低内存消耗
+
+## 技术栈
+- 网络框架: schudule,单线程Reactor模式
+- 协议支持: RTMP 1.0 规范
+- 音视频格式: H.264 + AAC
+- 编程语言: C
+- 构建工具: makefile
+
+## 依赖
 ```
-./build.sh
+libasound.so.2 
+libfaac.so
+librockchip_vpu.so
+librockchip_mpp.so
+libschudule.so
+
+sudo apt install libfaac-dev
+sudo apt install alsa-base alsa-utils
+https://github.com/rockchip-linux/mpp.git
+https://github.com/xiaohuihuige/schudule.git
 ```
 
-# 拉流
-1. 下载VLC播放器
-2. 编译的结果打印里有播放地址
-3. 打开VLC, 打开媒体->打开网络串流
-4. 点击播放
-![](./resources/1.png)
-![](./resources/2.png)
-![](./resources/3.png)
-![](./resources/4.png)
-
-# 调试
+## 编译
 ```
+make clean
+make 
+```
+## 打开日志
+```
+LOG_LEVEL_ALL
+LOG_LEVEL_DEBUG
+LOG_LEVEL_INFO
+LOG_LEVEL_WAR
+LOG_LEVEL_ERR
+
+编辑config.mk文件
+选择你的日志等级
+-DLOG_LEVEL=LOG_LEVEL_INFO
+
+```
+
+## 调试手段
+### GDB调试
+```
+gdb ./out/bin/rtmp_online
+run
+
+
 echo "/tmp/core.%e.%p" | sudo tee /proc/sys/kernel/core_pattern
 
 ulimit -c unlimited
+
 ```
-https://rtmp.veriskope.com/docs/spec#53chunking
-https://zhuanlan.zhihu.com/p/645648373
 
-
-## 问题
-### 1.出现send资源不可用的时候，大概率是发送缓冲满了
+### 出现send资源不可用的时候，大概率是发送缓冲满了
 ```
 ##设置TCP发送缓存区
 #查看缓冲信息
@@ -37,66 +74,42 @@ sudo sysctl -w net.core.wmem_max="12582912"
 
 #生效
 sudo sysctl -p
-
-
-```
-## 观察和学习rtmp协议
-1. 克隆nginx-rtmp-module
-```
-git clone https://github.com/arut/nginx-rtmp-module
-```
-2. 安装nginx
-```
-wget https://nginx.org/download/nginx-1.24.0.tar.gz
-tar -zxvf nginx-1.24.0.tar.gz
-cd nginx-1.24.0
-
-./configure \
-	--with-threads \
- 	--with-http_stub_status_module \
- 	--with-http_ssl_module \
- 	--with-http_realip_module \
- 	--with-stream \
- 	--with-stream_ssl_module \
- 	--add-module=../nginx-rtmp-module
-
-make -j8
-
-sudo make install
-
-sudo ln -s /usr/local/nginx/sbin/nginx /usr/local/bin/nginx
-
-```
-3. 操作nginx
-```
-#查看配置是否成功配置
-sudo nginx -t
-#启动nginx
-sudo nginx
-
-sudo nginx -s reload
-sudo nginx -s stop
-
-sudo vim /usr/local/nginx/conf/nginx.conf
-
-rtmp {
-    server {                   # 标识为一个服务
-        listen 1935            # rtmp流服务器监听的端口号
-        so_keepalive=2s:1:2;   # 
-        chunk_size 4000;       # 流复用块的大小，值越大cpu消耗越低
-        application live {     # live是推拉流的路径名字
-            live on;           # 开始实时直播
-        }
-    }
-}
 ```
 
-4. ffmpeg推流
+###  使用tcpdump抓包
 ```
-ffmpeg -re -stream_loop -1 -i mountain.h264 -vcodec copy -f flv  rtmp://192.168.181.128:8890/live
-ffmpeg -re -stream_loop -1  -i suiyueruge.aac -c:a aac -f flv rtmp://192.168.181.128:8890/live
-
-tcpdump -i eth0 port 1935 -w rtmp.pcap  # 捕获RTMP流量
-rtmp://192.168.181.128:8890/live
+sudo tcpdump -i lo -w rtmp.pcap port 1935
 ```
 
+### 使用wireshark分析
+```
+wireshark rtmp.pcap
+```
+### 使用top监控CPU和内存
+```
+top-p$(pgrep rtmp_server)
+```
+
+### 使用perf分析性能热点
+```
+perf record -g ./bin/rtmp_server
+perf report
+```
+
+### Valgrind 是一个强大的工具，用于检测内存泄漏、内存错误和性能问题
+```
+valgrind --leak-check=full ./your_program
+```
+
+### 进程内存使用情况
+```
+sudo watch -n 0.1  cat /proc/3870453/status
+VmSize:   169744 kB
+VmRSS:     20552 kB
+```
+
+## 后续优化
+- 支持更多的流格式
+- 支持HLS/DASH输出
+- 加入握手时密钥验证
+- 使用多线程Reactor模式

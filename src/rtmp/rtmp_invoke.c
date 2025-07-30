@@ -32,7 +32,12 @@ static int _rtmpReadOnconnect(RtmpSession *session, bs_t *b)
     
     amf_read_object_item(b, &items);
 
-    LOG("app: %s, flashver: %s, type: %s, swfUrl: %s, tcUrl: %s, fpad: %d, capabilities: %f, audioCodecs: %f, videoCodecs: %f, videoFunction: %f, encoding: %f, pageUrl: %s",
+    DBG("app: [%s], flashver: [%s]\n "
+        "type: [%s], swfUrl: [%s]\n"
+        "tcUrl: [%s], fpad: [%d]\n"
+        "capabilities: [%f], audioCodecs: [%f]\n"
+        "videoCodecs: [%f], videoFunction: [%f], \n"
+        "encoding: [%f], pageUrl: [%s]", 
         session->config.app, session->config.flashver,
         session->config.type, session->config.swfUrl,
         session->config.tcUrl, session->config.fpad,

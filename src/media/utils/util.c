@@ -33,7 +33,7 @@ void printfRtmpAddr(int port, const char *app)
 
     getHostAddrs(play_ip, sizeof(play_ip));
 
-    LOG("play rtmp address 【rtmp://%s:%d/%s】", play_ip, port, app);
+    LOG("the rtmp server, play rtmp stream address is【rtmp://%s:%d/%s】", play_ip, port, app);
 }
 
 uint32_t calculateTimeStamp(double *fractional_part, int fps, int sample_number)
@@ -142,4 +142,38 @@ Buffer *findFrameNaluBuffer(uint8_t *data, int length)
     }
 
     return NULL;
+}
+
+
+int paresADTSHeader(AdtsHeader *header, uint8_t *data, int size)
+{
+    bs_t *b = bs_new(data, size);
+
+    header->syncword = bs_read_u(b, 12);
+
+    header->id = bs_read_u(b, 1);
+    header->layer = bs_read_u(b, 2);
+    header->protectionAbsent = bs_read_u(b, 1);
+    header->profile = bs_read_u(b, 2);
+    header->samplingFreqIndex = bs_read_u(b, 4);
+    header->privateBit = bs_read_u(b, 1);
+    header->channelCfg = bs_read_u(b, 3);
+    header->originalCopy = bs_read_u(b, 1);
+    header->home = bs_read_u(b, 1);
+
+    header->copyrightIdentificationBit = bs_read_u(b, 1);
+    header->copyrightIdentificationStart = bs_read_u(b, 1);
+
+    header->aacFrameLength = bs_read_u(b, 13);
+    header->adtsBufferFullness = bs_read_u(b, 11);
+
+    header->numberOfRawDataBlockInFrame = bs_read_u(b, 2);
+    header->channelCfg = bs_read_u(b, 3);
+    LOG("samplingFreqIndex %d, length %d, %d, number %d, channle %d, protectionAbsent %d, profile %d, adtsBufferFullness %d, privateBit %d",
+        header->samplingFreqIndex, header->aacFrameLength,
+        bs_pos(b), header->numberOfRawDataBlockInFrame, header->channelCfg, header->protectionAbsent, header->profile, header->adtsBufferFullness, header->privateBit);
+
+    int length = bs_pos(b);
+    FREE(b);    
+    return length;
 }

@@ -41,8 +41,9 @@ RtmpServer *createRtmpServer(const char *ip, int port)
         
         setParentClassServer(rtmp->server, rtmp);
 
-        return rtmp;
+        LOG("rtmp server start success! %p", rtmp);
 
+        return rtmp;
     } while (0);
 
     destroyRtmpServer(rtmp);
@@ -58,7 +59,7 @@ void destroyRtmpServer(RtmpServer *rtmp)
     destroyTcpServer(rtmp->server);
 
     MUTEX_LOCK(&rtmp->myMutex);
-    destroyFifoQueueTask(rtmp->stream, RtmpMedia);
+    destroyFifoQueue(rtmp->stream);
     MUTEX_UNLOCK(&rtmp->myMutex);
 
     MUTEX_DESTROY(&rtmp->myMutex);

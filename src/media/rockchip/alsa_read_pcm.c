@@ -53,9 +53,10 @@ int getAlsaCareDriver(const char *driver_name, const char *name, char *result, i
 }
 
 //SND_PCM_FORMAT_S16_LE
-snd_pcm_t *createAlsaAudio(const char *device_name, int sample_rate, int channel_count, snd_pcm_format_t format)
+snd_pcm_t *createAlsaAudio(const char *device_name, uint32_t sample_rate, uint32_t channel_count, snd_pcm_format_t format)
 {
     snd_pcm_t *capture_handle = NULL;
+    uint32_t sample_rate_ = sample_rate;
 
     do {
         int32_t err = snd_pcm_open(&capture_handle, device_name, SND_PCM_STREAM_CAPTURE, 0);
@@ -94,9 +95,9 @@ snd_pcm_t *createAlsaAudio(const char *device_name, int sample_rate, int channel
         }
 
         int32_t dir = 0;
-        err = snd_pcm_hw_params_set_rate_near(capture_handle, hw_params, &sample_rate, &dir);
+        err = snd_pcm_hw_params_set_rate_near(capture_handle, hw_params, &sample_rate_, &dir);
         if (err) {
-            ERR("Failed to set sample rate to, %d: %s", sample_rate, snd_strerror(err));
+            ERR("Failed to set sample rate to, %d: %s", sample_rate_, snd_strerror(err));
             break;
         }
 
@@ -112,7 +113,7 @@ snd_pcm_t *createAlsaAudio(const char *device_name, int sample_rate, int channel
             break;
         }
 
-        LOG("Recording started! %d", sample_rate);
+        LOG("Recording started! %d", sample_rate_);
 
         return capture_handle;
     } while(0);
@@ -122,7 +123,7 @@ snd_pcm_t *createAlsaAudio(const char *device_name, int sample_rate, int channel
     return NULL;
 }
 
-Buffer *readAlsaAudio(snd_pcm_t *capture_handle, int channel_count, int32_t num_samples)
+Buffer *readAlsaAudio(snd_pcm_t *capture_handle, uint32_t channel_count, int32_t num_samples)
 {
     Buffer *buffer = createBuffer(num_samples * channel_count * 2);
     if (!buffer)
@@ -137,6 +138,5 @@ Buffer *readAlsaAudio(snd_pcm_t *capture_handle, int channel_count, int32_t num_
         ERR("Can't read PCM device: %s", snd_strerror(count));
         return NULL;
     }
-    LOG("%d", buffer->length);
     return buffer;
 }

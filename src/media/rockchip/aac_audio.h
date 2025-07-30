@@ -4,7 +4,7 @@
 #include <schedule/net-common.h>
 #include "type.h"
 
-AudioMedia *createAlsaAacMedia(const char *file);
+AudioMedia *createAlsaAacMedia(RtmpConfig *config);
 Buffer *getAlsaAacMediaFrame(AudioMedia *media);
 void destroyAlsaAacMedia(AudioMedia *media);
 

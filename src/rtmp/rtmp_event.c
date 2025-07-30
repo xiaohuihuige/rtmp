@@ -11,7 +11,7 @@ static int _handleRtmpEvent(RtmpSession *session, bs_t *b)
     {    
         int stream_id    = bs_read_u(b, 32);
         int cache_lenth  = bs_read_u(b, 32);
-        LOG("event_type %d,%d,%d", event_type, stream_id, cache_lenth);
+        DBG("event_type %d,%d,%d", event_type, stream_id, cache_lenth);
     }
     //rtmp_server_stream_begin(rtmp_ptr rtmp, uint32_t streamId);
     return NET_SUCCESS;
@@ -23,7 +23,7 @@ static int _handleAcknowledgement(RtmpSession *session, bs_t *b)
 
     int window_size  = bs_read_u(b, 32);
 
-    LOG("window size %d", window_size);
+    DBG("window size %d", window_size);
 
     return NET_SUCCESS;
 }
@@ -34,7 +34,7 @@ static int _handleSetChunkSize(RtmpSession *session, bs_t *b)
 
     int chunk_size = bs_read_u(b, 32);
 
-    LOG("chunk_size %d", chunk_size);
+    DBG("chunk_size %d", chunk_size);
 
     return NET_SUCCESS;
 }

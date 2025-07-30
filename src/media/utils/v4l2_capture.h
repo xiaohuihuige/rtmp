@@ -2,9 +2,9 @@
 #define __V4L2_CAPTURE_H__
 
 #include <schedule/net-common.h>
-#include "type.h"
 #include <sys/ioctl.h>
 #include <linux/videodev2.h>
+#include <schedule/buffer.h>
 
 #define BUFFER_COUNT 4
 

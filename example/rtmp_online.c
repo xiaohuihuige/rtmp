@@ -1,11 +1,12 @@
 #include <schedule/net-common.h> 
 #include "rtmp_server.h"
 #include "rtmp_media.h"
-#include "media_config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
 #include <unistd.h>
+#include "mpp_h264.h"
+#include "aac_audio.h"
 
 volatile sig_atomic_t keep_running = 1;
 
@@ -77,6 +78,45 @@ void exception_handling()
     }
 }
 
+RtmpConfig *createOnlieRtmpConfig(const char *app, const char *v4l2_device, const char *aac_device)
+{
+    RtmpConfig *config = CALLOC(1, RtmpConfig);
+    if (!config)
+        return NULL;
+
+    //gop 缓存2个I帧
+    config->idr_count         = 2;
+    
+    //名称
+    config->app               = app;
+    config->v4l2_device       = v4l2_device;
+    config->alsa_device       = aac_device;
+
+    config->createH264Stream  = createMppH264Media;
+    config->destroyH264Stream = destroyMppH264Media;
+    config->getH264Stream     = getMppH264MediaFrame;
+    
+    //查看支持的分辨率和v4l2输出的格式
+    //v4l2-ctl --device=/dev/video0 --list-formats-ext
+    config->display_height    = 640;
+    config->display_width     = 480;
+    config->height            = 640;
+    config->width             = 480;
+
+    config->v4l2_format       = V4L2_PIX_FMT_YUYV;
+    config->fps               = 30;
+    config->mpp_format        = MPP_FMT_YUV422_YUYV;
+
+    // config->createAacStream  = createAlsaAacMedia;
+    // config->destroyAacStream = destroyAlsaAacMedia;
+    // config->getAacStream     = getAlsaAacMediaFrame;
+    // config->u64PcmSampleRate = 16000;
+    // config->u32PcmSampleBits = 16;
+    // config->u32PcmChannels   = 2;
+
+    return config;
+}
+
 int main()
 {
     exception_handling();
@@ -84,12 +124,12 @@ int main()
     RtmpServer *rtmp = NULL;
     RtmpMedia *app_media = NULL;
     RtmpConfig *app_config = NULL;
-
+    
     rtmp = createRtmpServer(DEFAULT_IP, 1935);
     if (!rtmp)
         goto ERROR;
 
-    app_config = createOnlieRtmpConfig("app", "/dev/video1", NULL);
+    app_config = createOnlieRtmpConfig("app", "/dev/video1", "plughw:2,0");
     if (!app_config)
         goto ERROR;
     
@@ -105,6 +145,6 @@ int main()
 ERROR:    
     destroyRtmpMedia(app_media);
     destroyRtmpServer(rtmp);
-    destroyRtmpConfig(app_config);
+    FREE(app_config);
     return EXIT_SUCCESS;
 }

@@ -9,7 +9,6 @@
 
 typedef struct 
 {
-   int gop_count;
    int state;
    Seesion *conn;
    SessionConfig config;

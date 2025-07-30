@@ -20,4 +20,4 @@ AR :=ar
 # LOG_LEVEL_WAR,
 # LOG_LEVEL_ERR,
 
-CFLAGS = -lasound -lrockchip_mpp -lrockchip_vpu -lfaac -DLOG_LEVEL=LOG_LEVEL_ALL
+CFLAGS = -lasound -lrockchip_mpp -lrockchip_vpu -lfaac -DLOG_LEVEL=LOG_LEVEL_INFO

@@ -3,6 +3,7 @@
 #include "type.h"
 #include <schedule/amf0.h>
 #include "send_chunk.h"
+#include "rtmp_media.h"
 
 #define MESSAGE_RESULT "_result"
 #define MESSAGE_ERROR  "_error"
@@ -25,7 +26,7 @@ static void _buildSetStreamBegin(bs_t *b, uint32_t streamId);
 static void _buildConnectResult(bs_t *b, double transactionId, const char* fmsver, double capabilities, const char* code, const char* level, const char* description, double encoding);
 static void _buildWriteOnstatus(bs_t *b,  double transactionId, const char* level, const char* code, const char* description);
 static void _buildSampleAccess(bs_t *b,  double stream_id, const char *sample_access);
-static void _buildOnMetaData(bs_t *b, RtmpMedia *media);
+static void _buildOnMetaData(bs_t *b, RtmpSession *session);
 
 static void _buildPeerBandwidth(bs_t *b, uint32_t window_size, uint8_t limit_type)
 {
@@ -386,9 +387,9 @@ static void _buildSampleAccess(bs_t *b,  double stream_id, const char *sample_ac
 	amf_write_boolean(b, 1);
 }
 
-static void _buildOnMetaData(bs_t *b, RtmpMedia *media)
+static void _buildOnMetaData(bs_t *b, RtmpSession *session)
 {
-    assert(b || media);
+    assert(b || session);
 
     int length = AMF_STRING_LENGTH("onMetaData")  
                 + AMF_OBJECT_LENGTH
@@ -417,23 +418,27 @@ static void _buildOnMetaData(bs_t *b, RtmpMedia *media)
         .stream_id = 0,
     };
 
+    VideoMedia *video_config = getRtmpVideoMeida(session->media);
+
+    AudioMedia *audio_config = getRtmpAudioMedia(session->media);
+
     writeChunkHeader(b, &header);
 
     amf_write_string(b, "onMetaData", strlen("onMetaData"));
 
 	amf_write_object(b);
 	amf_write_NamedString(b,  "Server", strlen("Server"), "nginx-rtmp-module", strlen("nginx-rtmp-module"));
-	amf_write_NamedDouble(b,  "width",   strlen("width"),  media->video ? media->video->width : 0);
-	amf_write_NamedDouble(b,  "height",  strlen("height"),  media->video ? media->video->height : 0);
-	amf_write_NamedDouble(b,  "displayWidth",   strlen("displayWidth"),  media->video ? media->video->display_width : 0);
-	amf_write_NamedDouble(b,  "displayHeight",   strlen("displayHeight"),  media->video ? media->video->display_height : 0);
+	amf_write_NamedDouble(b,  "width",   strlen("width"),  video_config ? video_config->width : 0);
+	amf_write_NamedDouble(b,  "height",  strlen("height"),  video_config ? video_config->height : 0);
+	amf_write_NamedDouble(b,  "displayWidth",   strlen("displayWidth"),  video_config ? video_config->display_width : 0);
+	amf_write_NamedDouble(b,  "displayHeight",   strlen("displayHeight"),  video_config ? video_config->display_height : 0);
 	amf_write_NamedDouble(b,  "duration",   strlen("duration"),  DURATION);
-	amf_write_NamedDouble(b,  "framerate",   strlen("framerate"),  media->video ? media->video->fps : 0);
-	amf_write_NamedDouble(b,  "fps",         strlen("fps"),  media->video ? media->video->fps : 0);
-	amf_write_NamedDouble(b,  "videodatarate",   strlen("videodatarate"),  media->video ? media->video->videodatarate : 0);
-	amf_write_NamedDouble(b,  "videocodecid",   strlen("videocodecid"),    media->video ? media->video->videocodecid : 0);
-	amf_write_NamedDouble(b,  "audiodatarate",   strlen("audiodatarate"),  media->audio ? media->audio->audiodatarate : 0);
-	amf_write_NamedDouble(b,  "audiocodecid",   strlen("audiocodecid"),    media->audio ? media->audio->audiocodecid : 0);
+	amf_write_NamedDouble(b,  "framerate",   strlen("framerate"),  video_config ? video_config->fps : 0);
+	amf_write_NamedDouble(b,  "fps",         strlen("fps"),  video_config ? video_config->fps : 0);
+	amf_write_NamedDouble(b,  "videodatarate",   strlen("videodatarate"),  video_config ? video_config->videodatarate : 0);
+	amf_write_NamedDouble(b,  "videocodecid",   strlen("videocodecid"),    video_config ? video_config->videocodecid : 0);
+	amf_write_NamedDouble(b,  "audiodatarate",   strlen("audiodatarate"),  audio_config ? audio_config->audiodatarate : 0);
+	amf_write_NamedDouble(b,  "audiocodecid",   strlen("audiocodecid"),    audio_config ? audio_config->audiocodecid : 0);
     amf_write_NamedString(b, "profile", strlen("profile"), "", 0);
 	amf_write_NamedString(b, "level", strlen("level"),  "", 0);
 	amf_write_objectEnd(b);
@@ -643,16 +648,19 @@ int sendOnMetaData(RtmpSession *session, Buffer *buffer)
     bs_t *b = bs_new(buffer->data, buffer->length);
     if (!b) 
         return NET_FAIL;
-        
-    if (session->media->video)
-        LOG("media info width %d, height %d, fps %d, profile %d, level %d",
-            session->media->video->width, 
-            session->media->video->height, 
-            session->media->video->fps, 
-            session->media->video->profile_idc, 
-            session->media->video->level_idc);
 
-    _buildOnMetaData(b, session->media);
+    VideoMedia *video_config = getRtmpVideoMeida(session->media);
+    if (video_config)
+    {
+        LOG("rtmp session media config, width: %d, height: %d, fps: %d, profile: %d, level: %d",
+            video_config->width, 
+            video_config->height, 
+            video_config->fps, 
+            video_config->profile_idc, 
+            video_config->level_idc);
+    }
+        
+    _buildOnMetaData(b, session);
 
     sendToClient(session, buffer->data, bs_pos(b));
 

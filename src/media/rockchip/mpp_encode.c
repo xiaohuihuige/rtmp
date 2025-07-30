@@ -1,7 +1,7 @@
 #include "mpp_encode.h"
 #include "util.h"
 
-static void _initMppEncodeConfig(MppContext * ctx, int width, int height, int fps)
+static void _initMppEncodeConfig(MppContext * ctx, int width, int height, int fps, int format)
 {
     ctx->width  = width;
     ctx->height = height;
@@ -13,7 +13,7 @@ static void _initMppEncodeConfig(MppContext * ctx, int width, int height, int fp
     ctx->ver_stride = 2 * MPP_ALIGN(ctx->height, 16);//MPP_ALIGN(ctx->height, 16);
     //实测高度是360的时候，也可以正常运行，高度不用是16的倍数
     //经测试，只有MPP_FMT_YUV420SP(Y+UV交替)和MPP_FMT_YUV420P(Y+U+V)才可以
-    ctx->fmt  = MPP_FMT_YUV422_YUYV; 
+    ctx->fmt  = format; 
     ctx->type = MPP_VIDEO_CodingAVC;//MPP_VIDEO_CodingAVC;
 
     switch (ctx->fmt & MPP_FRAME_FMT_MASK)
@@ -205,7 +205,7 @@ static void _initEncodeBuffer(MppContext *ctx)
     mpp_frame_set_eos(ctx->frame, ctx->frm_eos);
 }
 
-MppContext *createMppEncode(int width, int height, int fps)
+MppContext *createMppEncode(int width, int height, int fps, int format)
 {
     MPP_RET ret = MPP_OK;
     MppContext * ctx = CALLOC(1, MppContext);
@@ -214,7 +214,7 @@ MppContext *createMppEncode(int width, int height, int fps)
 
     do {
         
-        _initMppEncodeConfig(ctx, width, height, fps);
+        _initMppEncodeConfig(ctx, width, height, fps, format);
 
         ret = mpp_buffer_get(NULL, &ctx->frm_buf, ctx->frame_size);
         if (ret)
@@ -230,7 +230,7 @@ MppContext *createMppEncode(int width, int height, int fps)
             break;
         }
 
-        LOG("%p encoder test start w %d h %d type %d",
+        DBG("%p mpp encoder config width: %d, height: %d, type: %d",
              ctx->ctx, ctx->width, ctx->height, ctx->type);
 
         MppPollType timeout = MPP_POLL_BLOCK;
@@ -264,7 +264,7 @@ MppContext *createMppEncode(int width, int height, int fps)
 
         _initEncodeBuffer(ctx);
 
-        LOG("mpp encode success type :%d", ctx->type);
+        DBG("mpp encode success type :%d", ctx->type);
         return ctx;
     } while (0);
 

@@ -12,13 +12,11 @@ static int _sendVideoFrameTimer(void *args)
     assert(args);
 
     RtmpSession *session = (RtmpSession *)args;
-
     Buffer *frame = fifoQueuePopUnblock(session->queue);
     if (!frame)
         return NET_FAIL;
 
     sendFrameStream(session, frame, session->channle[VIDEO_CHANNL].time_base);
-
     session->channle[VIDEO_CHANNL].time_base += frame->timestamp;
 
     bufferReleaseSpace(frame);
@@ -28,21 +26,27 @@ static int _sendVideoFrameTimer(void *args)
 
 int createSessionStreamTimer(RtmpSession *session)
 {
-    if (!session || !session->media->video)
+    if (!session)
         return NET_FAIL;
 
-    session->gop_count = session->media->video->fps * 6;
-
-    LOG("session gop count %d", session->gop_count);
-
-    while (session->gop_count--) {
-        if (NET_FAIL == _sendVideoFrameTimer(session))
-            break;
+    AudioMedia *audio_config = getRtmpAudioMedia(session->media);
+    VideoMedia *video_config = getRtmpVideoMeida(session->media);
+    int duration = -1;
+    if (audio_config)
+    {
+        duration = audio_config->duration/2;
+    } else if (video_config)
+    {
+        duration = video_config->duration/2;
+    } else {
+        return NET_FAIL;
     }
 
+    while (!_sendVideoFrameTimer(session)){}
+
     session->pull_stream_timer = addTimerTask(session->conn->tcps->scher,  
-                                                session->media->video->duration,
-                                                session->media->video->duration - 10,
+                                                duration,
+                                                duration,
                                                  _sendVideoFrameTimer, 
                                                  (void *)session);
     if (!session->pull_stream_timer)
@@ -174,7 +178,6 @@ RtmpSession *createRtmpSession(Seesion *conn)
         session->media          = NULL;
         session->conn           = conn;
         session->state          = RTMP_HANDSHAKE_UNINIT;
-        session->gop_count      = -1;
         session->pull_stream_timer = NULL;
 
         session->channle[VIDEO_CHANNL].index = 0;
@@ -182,7 +185,7 @@ RtmpSession *createRtmpSession(Seesion *conn)
         session->channle[VIDEO_CHANNL].time_base = 10;
         session->channle[AUDIO_CHANNL].time_base = 10;
 
-        LOG("create rtmp session success %p", session);
+        LOG("new connecttion! create rtmp session complete: %p", session);
 
         return session;
     } while(0);
@@ -205,12 +208,12 @@ void destroyRtmpSession(RtmpSession *session)
         deleteTimerTask(session->pull_stream_timer);
         session->pull_stream_timer = NULL;
     }
-
+ 
     if (session->queue) {
         releaseFifoQueue(session->queue);
         session->queue = NULL;
     }
-
+ 
     MUTEX_DESTROY(&session->myMutex);
     session->media = NULL;
     session->conn = NULL;

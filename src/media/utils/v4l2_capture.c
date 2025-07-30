@@ -34,14 +34,14 @@ void getV4l2Config(int fd, const char *dev_name)
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
 
-    LOG("Supported formats for device %s", dev_name);
+    DBG("Supported formats for device %s", dev_name);
 
     for (fmt.index = 0; ioctl(fd, VIDIOC_ENUM_FMT, &fmt) == 0; fmt.index++) {
-        LOG("Index:  [%s]", fmt.description);
-        LOG("   fmt pixelformat: '%c%c%c%c'", fmt.pixelformat & 0xFF,
+        DBG("Index:  [%s]", fmt.description);
+        DBG("   fmt pixelformat: '%c%c%c%c'", fmt.pixelformat & 0xFF,
                         (fmt.pixelformat >> 8) & 0xFF, (fmt.pixelformat >> 16) & 0xFF,
                         (fmt.pixelformat >> 24) & 0xFF);
-        LOG("   description = '%s'", fmt.description);
+        DBG("   description = '%s'", fmt.description);
 
 
 
@@ -50,7 +50,7 @@ void getV4l2Config(int fd, const char *dev_name)
         frame_size.pixel_format = fmt.pixelformat;
         for (frame_size.index = 0; ioctl(fd, VIDIOC_ENUM_FRAMESIZES, &frame_size) == 0; frame_size.index++) {
             if (frame_size.type == V4L2_FRMSIZE_TYPE_DISCRETE) {
-                LOG("   Resolution: %d x %d", frame_size.discrete.width, frame_size.discrete.height);
+                DBG("   Resolution: %d x %d", frame_size.discrete.width, frame_size.discrete.height);
 
                 // 获取帧率
                 struct v4l2_frmivalenum frame_interval;
@@ -60,7 +60,7 @@ void getV4l2Config(int fd, const char *dev_name)
 
                 for (frame_interval.index = 0; ioctl(fd, VIDIOC_ENUM_FRAMEINTERVALS, &frame_interval) == 0; frame_interval.index++) {
                     if (frame_interval.type == V4L2_FRMIVAL_TYPE_DISCRETE) {
-                        LOG("       Frame Interval: %.2d fps",  frame_interval.discrete.denominator / frame_interval.discrete.numerator);
+                        DBG("       Frame Interval: %.2d fps",  frame_interval.discrete.denominator / frame_interval.discrete.numerator);
                     }
                 }
             }
@@ -128,8 +128,8 @@ V4l2Capture *createV4l2Capture(const char *dev_name, int bufcnt, int width, int 
             fmtdesc.index = 0;
             fmtdesc.type = vfmt.type;
             while (!camera_source_ioctl(v4l2->fd, VIDIOC_ENUM_FMT, &fmtdesc)) {
-                LOG("fmt name: [%s]", fmtdesc.description);
-                LOG("fmt pixelformat: '%c%c%c%c', description = '%s'", fmtdesc.pixelformat & 0xFF,
+                DBG("fmt name: [%s]", fmtdesc.description);
+                DBG("fmt pixelformat: '%c%c%c%c', description = '%s'", fmtdesc.pixelformat & 0xFF,
                         (fmtdesc.pixelformat >> 8) & 0xFF, (fmtdesc.pixelformat >> 16) & 0xFF,
                         (fmtdesc.pixelformat >> 24) & 0xFF, fmtdesc.description);
                 fmtdesc.index++;
@@ -165,8 +165,8 @@ V4l2Capture *createV4l2Capture(const char *dev_name, int bufcnt, int width, int 
             break;
         }
 
-        LOG("width %d height %d", vfmt.fmt.pix.width, vfmt.fmt.pix.height);
-        LOG("fmt pixelformat: '%c%c%c%c'", vfmt.fmt.pix.pixelformat & 0xFF,
+        DBG("width %d height %d", vfmt.fmt.pix.width, vfmt.fmt.pix.height);
+        DBG("fmt pixelformat: '%c%c%c%c'", vfmt.fmt.pix.pixelformat & 0xFF,
                         (vfmt.fmt.pix.pixelformat >> 8) & 0xFF, (vfmt.fmt.pix.pixelformat >> 16) & 0xFF,
                         (vfmt.fmt.pix.pixelformat >> 24) & 0xFF);
 
@@ -216,7 +216,7 @@ V4l2Capture *createV4l2Capture(const char *dev_name, int bufcnt, int width, int 
             ERR("ERROR: VIDIOC_STREAMON");
             break;
         }
-        LOG("success open v4l2");
+        DBG("success open v4l2");
         return v4l2;
     } while (0);
 
@@ -243,7 +243,7 @@ void destroyV4l2Capture(V4l2Capture *v4l2)
 
     close(v4l2->fd);
     FREE(v4l2);
-    LOG("Camera release done.");
+    DBG("Camera release done.");
 }
 
 Buffer *getV4l2Frame(V4l2Capture *v4l2)
@@ -262,10 +262,10 @@ Buffer *getV4l2Frame(V4l2Capture *v4l2)
     // 监测是否有数据，最多等待5s
     int r = select(v4l2->fd + 1, &fds, NULL, NULL, &tv);
     if (r == -1) {
-        LOG("select err");
+        DBG("select err");
         return NULL;
     } else if (r == 0) {
-        LOG("select timeout");
+        DBG("select timeout");
         return NULL;
     }
 

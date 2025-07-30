@@ -35,7 +35,7 @@ static inline void printfMessage(char *message, int code)
 {
     for (int i = 0; i < sizeof(state)/sizeof(stateMessage); i++) {
         if (code == state[i].code)
-            LOG("%s %s", message, state[i].error);
+            DBG("%s %s", message, state[i].error);
     }
 }
 

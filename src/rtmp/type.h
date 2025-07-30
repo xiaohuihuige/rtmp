@@ -3,6 +3,10 @@
 
 #include "chunk_header.h"
 #include <schedule/fifo_queue.h>
+#include <faac.h>
+#include <alsa/asoundlib.h>
+#include "v4l2_capture.h"
+#include "mpp_encode.h"
 
 #define RTMP_VERSION 			3
 #define RTMP_HANDSHAKE_SIZE	 	1536
@@ -190,7 +194,6 @@ typedef struct
 typedef struct 
 {
 	Buffer *avc_sequence;
-	FifoQueue *queue;
 	Buffer *pps_buffer;
     Buffer *sps_buffer;
 	int fps;
@@ -201,26 +204,33 @@ typedef struct
 	int duration;
 	int profile_idc;
 	int level_idc;
-	int frame_count;
 	int videodatarate;
 	int videocodecid;
 	double fractional_part;
-	void *mpp_context;
+
+	V4l2Capture *v4l2;
+    MppContext *ctx;
 } VideoMedia;
 
 typedef struct 
 {
 	Buffer *adts_sequence;
-	FifoQueue *queue;
 	int duration;
-	int frame_count;
 	int stereo;
 	int audiocodecid;
 	int audiodatarate;
 	int audiosamplerate;
 	int audiosamplesize;
 	double fractional_part;
-	void *aac_context;
+
+	uint64_t  u64PcmSampleRate;  // 采样率
+    uint32_t  u32PcmSampleBits;  // 采样位数
+	uint32_t  u32PcmChannels;    // 声道数
+    uint64_t  u64PcmInSampleCnt; // 打开编码器时传出的参数，编码传入的PCM采样数（不是字节）
+	uint64_t  u64AacOutMaxBytes; // 打开编码器时传出的参数，编码传出最大字节数
+    snd_pcm_t *capture_handle;
+    faacEncHandle  pFaacEncHandle;
+	faacEncConfigurationPtr pFaacEncConf;
 } AudioMedia;
 
 typedef struct 
@@ -231,24 +241,42 @@ typedef struct
     struct list_head list;
 } GopCache;
 
-typedef struct 
+typedef struct RtmpConfig RtmpConfig;
+
+struct RtmpConfig
 {
+	int idr_count;
     const char *app;
     const char *h264_file;
     const char *aac_file;
+	const char *v4l2_device;
+	const char *alsa_device;
 
-	VideoMedia *(*createH264Stream)(const char *file);
+	uint32_t fps;
+	uint32_t display_width;
+	uint32_t display_height;
+	uint32_t width;
+	uint32_t height;
+	uint32_t v4l2_format;
+	uint32_t mpp_format;
+
+	VideoMedia *(*createH264Stream)(RtmpConfig *config);
 	void (*destroyH264Stream)(VideoMedia *media);
 	Buffer *(*getH264Stream)(VideoMedia *media);
 
-	AudioMedia *(*createAacStream)(const char *file);
+	uint64_t  u64PcmSampleRate;  // 采样率
+    uint32_t  u32PcmSampleBits;  // 采样位数
+	uint32_t  u32PcmChannels;    // 声道数
+
+	AudioMedia *(*createAacStream)(RtmpConfig *config);
 	void (*destroyAacStream)(AudioMedia *meida);
 	Buffer *(*getAacStream)(AudioMedia *media);
-} RtmpConfig;
+};
 
 typedef struct 
 {
-	GopCache *gop;
+	GopCache *video_gop;
+	GopCache *audio_gop;
 
     const char *app;
     VideoMedia *video;
