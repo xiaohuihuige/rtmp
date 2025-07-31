@@ -1,5 +1,7 @@
 
 #include "h264_nal.h"
+#include <stdint.h>
+#include "type.h"
 
 int rbsp_to_nal(const uint8_t* rbsp_buf, const int* rbsp_size, uint8_t* nal_buf, int* nal_size)
 {
@@ -142,4 +144,86 @@ int find_nal_unit(uint8_t *buf, int size, int *nal_start, int *nal_end)
 
     *nal_end = i;
     return (*nal_end - *nal_start);
+}
+
+Buffer *find_file_nal_unit(FILE *file_fp)
+{
+    if (!file_fp || feof(file_fp))
+        return NULL;
+
+    uint32_t start_index = 0;
+    uint32_t end_index   = 0;
+    uint32_t frame_type  = 0;
+
+    while (1)
+    {
+        uint8_t data[5] = {0};
+        if (fread(data, 1, sizeof(data), file_fp) != sizeof(data)) 
+            break;
+        
+        if (data[0] == 0 && data[1] == 0 && data[2] == 1)
+        {
+            frame_type  = data[3] & 0x1F; // 获取 NALU 类型
+            start_index = ftell(file_fp) - 2;
+            break;
+        }
+
+        if (data[0] == 0 && data[1] == 0 && data[2] == 0 && data[3] == 1)
+        {
+            frame_type  = data[4] & 0x1F; // 获取 NALU 类型
+            start_index = ftell(file_fp) - 1;
+            break;
+        }
+        fseek(file_fp, - sizeof(data) + 1, SEEK_CUR);
+    }
+
+    while (1)
+    {
+        uint8_t data[5] = {0};
+        if (fread(data, 1, sizeof(data), file_fp) != sizeof(data)) 
+            break;
+        
+        if (data[0] == 0 && data[1] == 0 && data[2] == 1)
+        {
+            end_index = ftell(file_fp) - 4;
+            fseek(file_fp, -sizeof(data), SEEK_CUR);
+            break;
+        }
+
+        if (data[0] == 0 && data[1] == 0 && data[2] == 0 && data[3] == 1)
+        {
+            end_index = ftell(file_fp) - 4;
+            fseek(file_fp, -sizeof(data), SEEK_CUR);
+            break;
+        }
+        fseek(file_fp, - sizeof(data) + 1, SEEK_CUR);
+    }
+
+    if(feof(file_fp)) 
+    {
+        fseek(file_fp, 0, SEEK_SET);
+        return NULL;
+    }
+
+    if (start_index <= 0 && end_index <= 0 && end_index - start_index > 0)
+    {
+        fseek(file_fp, 0, SEEK_SET);
+        return NULL;
+    }
+
+    Buffer *buffer = createBuffer(end_index - start_index);
+    if (!buffer)
+        return NULL;
+
+    buffer->frame_type = frame_type;
+    fseek(file_fp, start_index, SEEK_SET);
+
+    if (fread(buffer->data, 1, end_index - start_index, file_fp) != buffer->length)
+    {
+        fseek(file_fp, 0, SEEK_SET);
+        ERR("read file low than %d", buffer->length);
+    }
+    //LOG("%d, %d, %d, %d", start_index, end_index, end_index - start_index, buffer->frame_type);
+
+    return buffer;
 }

@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include "mpp_h264.h"
 #include "aac_audio.h"
+#include "h264.h"
 
 volatile sig_atomic_t keep_running = 1;
 
@@ -117,34 +118,67 @@ RtmpConfig *createOnlieRtmpConfig(const char *app, const char *v4l2_device, cons
     return config;
 }
 
+RtmpConfig *createFileRtmpConfig(const char *app, const char *h264_file)
+{
+    RtmpConfig *config = CALLOC(1, RtmpConfig);
+    if (!config)
+        return NULL;
+
+    //gop 缓存2个I帧
+    config->idr_count         = 2;
+    
+    //名称
+    config->app               = app;
+    config->h264_file         = h264_file;
+
+    config->createH264Stream  = createH264Media;
+    config->destroyH264Stream = destroyH264Media;
+    config->getH264Stream     = getH264MediaFrame;
+    
+    return config;
+}
+
 int main()
 {
     exception_handling();
     
-    RtmpServer *rtmp = NULL;
-    RtmpMedia *app_media = NULL;
-    RtmpConfig *app_config = NULL;
-    
+    RtmpServer *rtmp        = NULL;
+    RtmpMedia *app_media    = NULL;
+    RtmpMedia *live_media   = NULL;
+    RtmpConfig *app_config  = NULL;
+    RtmpConfig *live_config = NULL;
+
     rtmp = createRtmpServer(DEFAULT_IP, 1935);
     if (!rtmp)
         goto ERROR;
 
-    app_config = createOnlieRtmpConfig("app", "/dev/video1", "plughw:2,0");
+    app_config = createOnlieRtmpConfig("app", "/dev/video0", "plughw:2,0");
     if (!app_config)
         goto ERROR;
     
+    live_config = createFileRtmpConfig("live", "./resources/mountain.h264");
+    if (!live_config)
+        goto ERROR;
+
     app_media = createRtmpMedia(app_config);
     if (!app_media)
         goto ERROR;
-        
+
+    live_media= createRtmpMedia(live_config);
+    if (!live_media)
+        goto ERROR;
+
     addMediaToRtmpServer(rtmp, app_media);
+    addMediaToRtmpServer(rtmp, live_media);
 
     while (keep_running) 
         sleep(1);
 
 ERROR:    
     destroyRtmpMedia(app_media);
+    destroyRtmpMedia(live_media);
     destroyRtmpServer(rtmp);
     FREE(app_config);
+    FREE(live_config);
     return EXIT_SUCCESS;
 }

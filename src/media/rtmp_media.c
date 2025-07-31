@@ -208,6 +208,7 @@ void destroyRtmpMedia(RtmpMedia *media)
 
     if (!media->sessions) {
         destroyFifoQueue(media->sessions);
+        media->sessions = NULL;
     }
 
     if (media->video_gop) {

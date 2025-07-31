@@ -9,7 +9,7 @@
 
 typedef struct 
 {
-   int state;
+   volatile int state;
    Seesion *conn;
    SessionConfig config;
    Buffer *buffer;
@@ -17,7 +17,6 @@ typedef struct
    bs_t *b;
    RtmpMedia *media;
    MediaChannle channle[2];
-   Mutex myMutex;
    TaskTimer *pull_stream_timer;
    Queue *queue;
 } RtmpSession;

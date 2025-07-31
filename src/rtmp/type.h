@@ -194,8 +194,8 @@ typedef struct
 typedef struct 
 {
 	Buffer *avc_sequence;
+	Buffer *sps_buffer; 
 	Buffer *pps_buffer;
-    Buffer *sps_buffer;
 	int fps;
 	int width;
 	int height;
@@ -210,6 +210,8 @@ typedef struct
 
 	V4l2Capture *v4l2;
     MppContext *ctx;
+
+	FILE *file_fp;
 } VideoMedia;
 
 typedef struct 

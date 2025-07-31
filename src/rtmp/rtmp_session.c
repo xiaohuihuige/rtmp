@@ -10,13 +10,17 @@
 static int _sendVideoFrameTimer(void *args)
 {
     assert(args);
-
+    
     RtmpSession *session = (RtmpSession *)args;
     Buffer *frame = fifoQueuePopUnblock(session->queue);
     if (!frame)
         return NET_FAIL;
 
-    sendFrameStream(session, frame, session->channle[VIDEO_CHANNL].time_base);
+    LOG("send %p", session);
+    
+    if (sendFrameStream(session, frame, session->channle[VIDEO_CHANNL].time_base))
+        return NET_FAIL;
+
     session->channle[VIDEO_CHANNL].time_base += frame->timestamp;
 
     bufferReleaseSpace(frame);
@@ -173,8 +177,6 @@ RtmpSession *createRtmpSession(Seesion *conn)
         if (!session->temp_buffer)
             break;
 
-        MUTEX_INIT(&session->myMutex);
-
         session->media          = NULL;
         session->conn           = conn;
         session->state          = RTMP_HANDSHAKE_UNINIT;
@@ -202,19 +204,24 @@ void destroyRtmpSession(RtmpSession *session)
 
     LOG("destroy Rtmp Session %p", session);
 
-    removeRtmpSessionByMedia(session->media, session);
-
     if (session->pull_stream_timer) {
         deleteTimerTask(session->pull_stream_timer);
         session->pull_stream_timer = NULL;
     }
  
+    removeRtmpSessionByMedia(session->media, session);
+
     if (session->queue) {
-        releaseFifoQueue(session->queue);
-        session->queue = NULL;
+        while (1) {
+            Buffer *frame = fifoQueuePopUnblock(session->queue);
+            if (!frame)
+                break;
+            bufferReleaseSpace(frame);
+        }
+        COND_DESTROY(&session->queue->signal);
+        MUTEX_DESTROY(&session->queue->lock);
+        FREE(session->queue);
     }
- 
-    MUTEX_DESTROY(&session->myMutex);
     session->media = NULL;
     session->conn = NULL;
 

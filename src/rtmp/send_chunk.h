@@ -21,8 +21,10 @@ static inline int sendToClient(RtmpSession *session, uint8_t *data, int len)
     // DBG("[send message fd:%d, length: %d]", session->conn->fd, len);
     // showSendBufferSize(session->conn->fd);
     int send_bytes = send(session->conn->fd, data, len, MSG_NOSIGNAL);
-    if (send_bytes <= 0) 
+    if (send_bytes <= 0) {
         ERR("send() failed: %s", strerror(errno));
+        return NET_FAIL;
+    }
     return send_bytes;
 }
 

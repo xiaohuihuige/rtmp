@@ -5,28 +5,79 @@
 #include "h264_nal.h"
 #include "util.h"
 
-static void _paserNaluPacket(VideoMedia *media, uint8_t *data, int size, int type)
-{   
-    if (!media->queue || !data)
-        return;
+Buffer *getH264MediaFrame(VideoMedia *media)
+{
+    if (!media)
+        return NULL;
 
-    if (type == NAL_UNIT_TYPE_SPS) {
-        if (!media->sps_buffer)
-            media->sps_buffer = createFrameBuffer(data, size, type, 0);
-        return;
-    } else if (type == NAL_UNIT_TYPE_PPS) {
-        if(!media->pps_buffer)
-            media->pps_buffer = createFrameBuffer(data, size, type, 0);
-        return;
-    } else if (type == NAL_UNIT_TYPE_SEI) {
-        return;
+    Buffer *nalu_buffer = NULL;
+    while (1)
+    {
+        nalu_buffer = find_file_nal_unit(media->file_fp);
+        if (!nalu_buffer) {
+            fseek(media->file_fp, 0, SEEK_SET);
+            continue;
+        }
+
+        if (nalu_buffer->frame_type == NAL_UNIT_TYPE_SPS 
+            || nalu_buffer->frame_type == NAL_UNIT_TYPE_PPS 
+            || nalu_buffer->frame_type == NAL_UNIT_TYPE_SEI) {
+            FREE(nalu_buffer);
+            continue;
+        } 
+        break;
     }
+
+    //LOG("nalu_buffer->length %d", nalu_buffer->length);
+    Buffer *buffer = rtmpWriteVideoFrame(nalu_buffer->data, 
+                                        nalu_buffer->length, 
+                                        nalu_buffer->frame_type, 
+                                         media->duration);
+    
+    FREE(nalu_buffer);
+    if (!buffer)
+        return NULL;
+    return buffer;
+}
+
+VideoMedia *createH264Media(RtmpConfig *config)
+{
+    if (!config->h264_file  || access(config->h264_file,  R_OK | F_OK))
+        return NULL;
+
+    VideoMedia *media = CALLOC(1, VideoMedia); 
+    if (!media) 
+        return NULL;
+
+    media->file_fp = fopen(config->h264_file, "rb+");
+    if (!media->file_fp)
+       return NULL;
+
+    while (1)
+    {
+        Buffer * buffer = find_file_nal_unit(media->file_fp);
+        if (!buffer)
+            break;
+
+        if (buffer->frame_type == NAL_UNIT_TYPE_SPS) {
+            media->sps_buffer = buffer;
+        } else if (buffer->frame_type == NAL_UNIT_TYPE_PPS) {
+            media->pps_buffer = buffer;
+        } else {
+            FREE(buffer);
+        }
+
+        if (media->pps_buffer && media->sps_buffer)
+            break;
+    }
+
+    //LOG("media->pps_buffer");
 
     if (!media->avc_sequence && media->sps_buffer && media->pps_buffer)
     {
         sps_t *sps = read_seq_parameter_set_rbsp(media->sps_buffer);
         if (!sps)
-            return;
+            return NULL;
 
         media->width         = sps->width;
         media->height        = sps->height;
@@ -36,104 +87,31 @@ static void _paserNaluPacket(VideoMedia *media, uint8_t *data, int size, int typ
         media->profile_idc   = sps->profile_idc;
         media->videodatarate = VIDEODATARATE;
         media->videocodecid  = VIDEOCODECID_H264;
+        media->display_height = sps->height;
+        media->display_width  = sps->width;
+
+        LOG("media->width %d, media->height %d, media->fps %d", media->width, media->height, media->fps);
 
         media->avc_sequence = rtmpAvcSequence(media->sps_buffer, media->pps_buffer);
         if (!media->avc_sequence) 
-            return;
+            return NULL;
+
+        LOG("h264 init success");
 
         FREE(sps);
-    }
 
-    Buffer *buffer = rtmpWriteVideoFrame(data, size, type, 
-                                    calculateTimeStamp(&media->fractional_part, media->fps, 1));
-
-    enqueue(media->queue, buffer);
-}
-
-static int _runMediaStream(VideoMedia *media, Buffer *buffer)
-{
-    if (!buffer || buffer->index >= buffer->length || !media->queue)
-        return NET_FAIL;
-
-    int nal_start = 0, nal_end = 0;
-
-    int resp = find_nal_unit(buffer->data + buffer->index, buffer->length - buffer->index, &nal_start, &nal_end);
-    if (resp <= 0)
-        return NET_FAIL;
-
-    uint8_t *nalu_start = buffer->data + buffer->index + nal_start;
-
-    int frame_type = (*nalu_start) & 0x1F;
-   
-    _paserNaluPacket(media, nalu_start, nal_end - nal_start, frame_type);
-
-    buffer->index += nal_end - nal_start;
-
-    return NET_SUCCESS;
-}
-
-Buffer *getH264MediaFrame(VideoMedia *media)
-{
-    // if (media->frame_count  <= index)
-    //     return NULL;
-
-    // int count = 0;
-    // FifoQueue *pos = NULL;
-
-    // list_for_each_entry(pos, &media->queue->list, list)  
-    // {
-    //     if (count == index) {
-    //         return pos->task; // 找到指定索引的数据
-    //     }
-    //     count++;
-    // }
-    
-    return NULL; // 如果索引超出范围，返回 NULL
-}
-
-VideoMedia *createH264Media(const char *file)
-{
-    Buffer *buffer    = NULL;
-    VideoMedia *media = NULL;
-
-    do {
-        buffer = readMediaFile(file);
-        if (!buffer)
-            break;
-
-        media = CALLOC(1, VideoMedia); 
-        if (!media) 
-            break;
-
-        media->queue = createFifiQueue();
-        if (!media->queue)
-            break;
-
-        while (1) if (_runMediaStream(media, buffer)) break;
-
-        media->frame_count = list_count_nodes(&media->queue->list);  
-
-        FREE(buffer);
-        
         return media;
-    } while (0);
-    
-    FREE(buffer);
+    }
+    LOG("media->pps_buffer");
     destroyH264Media(media);
-
     return NULL;
-
 }
 
 void destroyH264Media(VideoMedia *media)
 {
     if (!media)
         return;
-
-    destroyFifoQueue(media->queue, Buffer);
-
-    FREE(media->sps_buffer);
-    FREE(media->pps_buffer); 
+    fclose(media->file_fp);
     FREE(media->avc_sequence);
     FREE(media);
 }
